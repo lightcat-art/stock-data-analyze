@@ -101,7 +101,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+# 관리자 화면을 한국어로 변경
+# LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ko'
 
 # TIME_ZONE = 'UTC'
 TIME_ZONE = 'Asia/Seoul'
