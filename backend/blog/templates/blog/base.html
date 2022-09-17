@@ -1,0 +1,30 @@
+{% load static %}
+<html>
+<head>
+    <title>lightcat's Velog</title>
+    <!-- bootstrap 설치 -->
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+    <!-- css파일 import -->
+    <link rel="stylesheet" href="{% static 'css/blog.css' %}">
+    <!-- font -->
+    <link href="//fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="page-header">
+    <h1><a href="/">lightcat's Velog</a></h1>
+</div>
+<div class="content container">
+    <div class="row">
+        <div class="col-md-8">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
