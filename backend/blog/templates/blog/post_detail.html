@@ -9,7 +9,10 @@
     {% endif %}
     <br/>
     <!-- 글 수정하기는 특정 포스트 상세내용 안에서 수정되어야함-->
-    <a class="btn btn-default" href="{% url 'post_edit' pk=post.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
+    <!-- 관리자로 로그인한 유저만 링크가 보일수 있게 만듦 -->
+    {% if user.is_authenticated %}
+        <a class="btn btn-default" href="{% url 'post_edit' pk=post.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
+    {% endif %}
     <h1>{{ post.title }}</h1>
     <p>{{ post.text|linebreaksbr }}</p>
 </div>
