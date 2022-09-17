@@ -7,7 +7,10 @@
         <p>published : {{ post.published_date }}</p>
     </div>
 
-    <h1><a href="">{{ post.title }} (it's not applied for korean)</a></h1>
+    <!-- Post 모델에서 기본키를 지정하지 않았기 때문에, 장고는 pk 라는 필드를 추가해 새로운 블로그
+    게시물이 추가될 떄마다 값이 1,2,3 처럼 증가하게됨.
+    Post 객체의 다른 필드에 액세스하는 것과 같은 방식으로 post.pk를 작성하여 기본 키에 액세스 한다.-->
+    <h1><a href="{% url 'post_detail' pk=post.pk %}">{{ post.title }} (it's not applied for korean)</a></h1>
     <p>{{ post.text|linebreaksbr }}</p>
 </div>
 {% endfor %}
