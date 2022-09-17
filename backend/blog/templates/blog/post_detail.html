@@ -3,10 +3,13 @@
 {% block content %}
 <div class="post">
     {% if post.published_date %}
-    <div class="date">
-        {{ post.published_date }}
-    </div>
+        <div class="date">
+            {{ post.published_date }}
+        </div>
     {% endif %}
+    <br/>
+    <!-- 글 수정하기는 특정 포스트 상세내용 안에서 수정되어야함-->
+    <a class="btn btn-default" href="{% url 'post_edit' pk=post.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
     <h1>{{ post.title }}</h1>
     <p>{{ post.text|linebreaksbr }}</p>
 </div>

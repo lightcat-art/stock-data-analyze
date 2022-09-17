@@ -2,6 +2,7 @@
 
 {% block content %}
     <h1>New Post</h1>
+    <!-- Form을 제출할때 같은 뷰를 다시 불러옴. 이때 request에는 우리가 입력했던 데이터를 request.POST에 가지고 있음.-->
     <form method="POST" class="post-form">{% csrf_token %}
         {{ form.as_p }}
         <button type="submit" class="save btn btn-default">Save</button>

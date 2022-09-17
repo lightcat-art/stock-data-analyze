@@ -20,12 +20,27 @@ def post_new(request):
     if request.method == "POST":
         # 폼에서 입력된 데이터를 PostForm으로 넘겨주기.
         form = PostForm(request.POST)
-        if form.is_valid(): # 모든 필드에 값이 있어야 하고, 잘못된 값이 있다면 저장되지 않도록 체크.
-            post = form.save(commit=False) # 폼을 저장하지만, 바로 Post모델에 저장하지 않도록 commit옵션 False
-            post.author = request.user # 작성자를 Post 모델에 추가
+        if form.is_valid():  # 모든 필드에 값이 있어야 하고, 잘못된 값이 있다면 저장되지 않도록 체크.
+            post = form.save(commit=False)  # 폼을 저장하지만, 바로 Post모델에 저장하지 않도록 commit옵션 False
+            post.author = request.user  # 작성자를 Post 모델에 추가
             post.published_date = timezone.now()
-            post.save() # 새 Post 글 생성
-            return redirect('post_detail', pk=post.pk) # 블로그 글을 작성한다음 post_detail페이지로 자동이동.
+            post.save()  # 새 Post 글 생성
+            return redirect('post_detail', pk=post.pk)  # 블로그 글을 작성한다음 post_detail페이지로 자동이동.
     else:
         form = PostForm()
+    return render(request, 'blog/post_edit.html', {'form': form})
+
+
+def post_edit(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    if request.method == "POST":
+        form = PostForm(request.POST, instance=post)  # instance=post를 써주지 않으면, 새로운 post로 인식함.
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.published_date = timezone.now()
+            post.save()
+            return redirect('post_detail', pk=post.pk)
+    else:
+        form = PostForm(instance=post)  # 글을 수정할때는 이전 데이터를 불러와야함.
     return render(request, 'blog/post_edit.html', {'form': form})
