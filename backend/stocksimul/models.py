@@ -14,3 +14,15 @@ class StockSimulParam(models.Model):
 
     def __str__(self):
         return self.event_name
+
+
+class StockSimulResult(models.Model):
+    stock_simul_param_id = models.ForeignKey("StockSimulParam", on_delete=models.CASCADE)
+    event_code = models.CharField(max_length=10)
+    event_name = models.CharField(max_length=200)
+    max_rate = models.FloatField(default=0)
+    max_days_taken = models.IntegerField(default=0)
+    min_rate = models.FloatField(default=0)
+    min_days_taken = models.IntegerField(default=0)
+
+
