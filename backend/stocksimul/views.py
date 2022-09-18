@@ -11,11 +11,11 @@ def stock_simul_param(request):
             stock = form.save(commit=False)  # 폼을 저장하지만, 바로 모델에 저장하지 않도록 commit옵션 False
             event_name = stock.event_name
             start_date = stock.start_date
-            return redirect('stock_simul_result', event_name=event_name, start_date=start_date, days=stock.days)
+            return redirect('stock_simul_result')
     else:
         form = StockSimulParamForm()
     return render(request, 'stocksimul/stock_simul_param.html', {'form': form})
 
 
-def stock_simul_result(request, event_name, start_date):
+def stock_simul_result(request):
     return render(request, 'stocksimul/stock_simul_result.html')

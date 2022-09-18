@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
     <!-- css파일 import -->
-<!--    <link rel="stylesheet" href="{% static 'css/stocksimul.css' %}">-->
+    <link rel="stylesheet" href="{% static 'css/stocksimul.css' %}">
     <!-- font -->
     <link href="//fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext" rel="stylesheet" type="text/css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,7 +20,7 @@
 <div class="content container">
     <div class="row">
         <div class="col-md-8">
-            <h1>시뮬레이션 대상</h1>
+            <h1>정보 입력</h1>
             <!-- Form을 제출할때 같은 뷰를 다시 불러옴. 이때 request에는 우리가 입력했던 데이터를 request.POST에 가지고 있음.-->
             <form method="POST" class="post-form">{% csrf_token %}
                 {{ form.as_p }}
