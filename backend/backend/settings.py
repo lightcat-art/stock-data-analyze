@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'blog'  # 앱을 사용한다는 것을 django에게 알려주기
+    'blog',  # 앱을 사용한다는 것을 django에게 알려주기
+    'stocksimul',
 ]
 
 MIDDLEWARE = [
