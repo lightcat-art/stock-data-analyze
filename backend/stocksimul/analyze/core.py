@@ -8,7 +8,8 @@ class Core:
         pass
 
     def analyze(self, event_code, start_date, end_date):
-        
+
         codeDF = stock.get_market_ohlcv_by_date(start_date, end_date, event_code)
         print(codeDF)
+        return codeDF
 

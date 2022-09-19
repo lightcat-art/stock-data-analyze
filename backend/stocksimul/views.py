@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
+from lxml.html.builder import HTML
 
 from .analyze.core import Core
 from .forms import StockSimulParamForm
@@ -28,5 +29,8 @@ def stock_simul_result(request, pk):
     start_date = simul_param.start_date.strftime('%Y%m%d')
     print(start_date)
     print(end_date)
-    Core().analyze('005930',start_date, end_date)
-    return render(request, 'stocksimul/stock_simul_result.html', {'simul_param':simul_param})
+    code_df = Core().analyze('005930',start_date, end_date)
+    print(code_df.to_html())
+    # code_df_html = HTML(code_df.to_html(classes='table table-stripped'))
+    code_df_html = code_df.to_html(classes='table table-stripped')
+    return render(request, 'stocksimul/stock_simul_result.html', {'code_df':code_df_html})
