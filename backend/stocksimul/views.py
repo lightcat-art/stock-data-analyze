@@ -10,6 +10,7 @@ from .models import StockSimulParam
 from .models import StockPrice
 from pykrx.website.krx.market import wrap
 
+
 def stock_simul_param(request):
     if request.method == "POST":
         form = StockSimulParamForm(request.POST)
@@ -43,13 +44,17 @@ def stock_simul_result(request, pk):
 
     code_df = Core().stock_graph(event_code, start_date, end_date)
     code_df = code_df.reset_index()
-    code_df.rename(columns={'날짜':'date','시가': 'open', '종가': 'close','거래량':'volume','고가':'high','저가':'low'}, inplace=True)
+    code_df.rename(columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high', '저가': 'low'},
+                   inplace=True)
     print(code_df)
     for item in code_df.to_dict('records'):
-        print(item)
-        entry = StockPrice(**item)
-        entry.event_code = event_code
-        entry.save()
+        # print(item)
+        print(StockPrice.objects.filter(date=item['date']).filter(event_code=event_code))
+        if StockPrice.objects.filter(date=item['date']).filter(event_code=event_code).count() < 1:
+            entry = StockPrice(**item)
+            entry.event_code = event_code
+            entry.save()
+
 
     code_df_html = code_df.to_html()
 

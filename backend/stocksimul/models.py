@@ -28,7 +28,9 @@ class StockSimulResult(models.Model):
 
 
 class StockPrice(models.Model):
-    event_code = models.CharField(max_length=10, primary_key=True)
+    # 기본적으로 django가 auto-increment id를 생성하기 때문에, 명시적으로 생성할 pk에는 primary_key 옵션을 넣어주어야 한다.
+    stock_price_id = models.BigAutoField(primary_key=True)
+    event_code = models.CharField(max_length=10)
     date = models.DateField()
     open = models.IntegerField(default=-1)
     close = models.IntegerField(default=-1)
@@ -36,7 +38,6 @@ class StockPrice(models.Model):
     low = models.IntegerField(default=-1)
     volume = models.IntegerField(default=-1)
 
+    objects = models.Manager()
     class Meta:
-        constraints = [
-            UniqueConstraint(fields=['event_code', 'date'], name='unique_event_code_date'),
-        ]
+        index_together = [("event_code", "date"),]
