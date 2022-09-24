@@ -24,8 +24,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-30kc0n7n10f+*%cnekqfr)m8y8pnfoh)d7($2ly!rnpxg+$lln'
 
-# open dart api key
-OPEN_DART_API_KEY = 'c7b16eb1d1497ef4219a393248a46fb44b61da6e'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True

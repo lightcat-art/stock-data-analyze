@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.db.models import UniqueConstraint
 from django.utils import timezone
 
 
@@ -26,3 +27,16 @@ class StockSimulResult(models.Model):
     min_days_taken = models.IntegerField(default=0)
 
 
+class StockPrice(models.Model):
+    event_code = models.CharField(max_length=10, primary_key=True)
+    date = models.DateField()
+    open = models.IntegerField(default=-1)
+    close = models.IntegerField(default=-1)
+    high = models.IntegerField(default=-1)
+    low = models.IntegerField(default=-1)
+    volume = models.IntegerField(default=-1)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['event_code', 'date'], name='unique_event_code_date'),
+        ]

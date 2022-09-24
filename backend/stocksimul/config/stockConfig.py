@@ -11,3 +11,6 @@ TEST_YN = False
 TEST_FIELD_SCAN_PERIOD = 7  # 기준날짜 이전 몇일까지 코스피하락한 날짜를 뽑아낼지
 TEST_SIMULATION_PERIOD = 70  # 기준날짜로부터 이후 시뮬레이션할 기간
 TEST_START_DATE = '20180701'  # 기준날짜
+
+# open dart api key
+OPEN_DART_API_KEY = 'c7b16eb1d1497ef4219a393248a46fb44b61da6e'
