@@ -1,5 +1,6 @@
 from datetime import timedelta
-
+from time import strptime, mktime
+import json
 from django.db import transaction
 
 from django.shortcuts import render, get_object_or_404, redirect
@@ -55,7 +56,52 @@ def stock_simul_result(request, pk):
             entry.event_code = event_code
             entry.save()
 
+    stocks = StockPrice.objects.filter(event_code=event_code).order_by('date')
+
+    chart_data = make_chart_data(stocks, event_name)
 
     code_df_html = code_df.to_html()
 
-    return render(request, 'stocksimul/stock_simul_result.html', {'code_df': code_df_html})
+    return render(request, 'stocksimul/stock_simul_result.html', {'code_df': code_df_html, 'chart_data':chart_data})
+
+
+# def stock_simul_graph(request, event_code, event_name):
+#     stocks = StockPrice.objects.filter(event_code=event_code).order_by('date')
+#     chart_data = make_chart_data(stocks, event_name)
+#     return chart_data
+
+
+def make_chart_data(stocks, event_name):
+    '''
+    :param stocks: StockPrice 객체 리스트
+    :param event_name: 종목명
+    :return:
+    '''
+    chart_data = {}
+    close_list = []
+    open_list = []
+    for stock in stocks:
+        time_tuple = strptime(str(stock.date), '%Y-%m-%d')
+        utc_now = mktime(time_tuple) * 1000
+        close_list.append([utc_now, stock.close])
+        open_list.append([utc_now, stock.open])
+
+    # chart_data = {
+    #     'chart': {'height': 500},
+    #     'title': {'text': event_name},
+    #     'setOptions': {'global': {'useUTC': 'false'}},
+    #     'xAxis': {
+    #         'type': 'date',
+    #         'lables': {
+    #         }
+    #     }
+    # }
+
+    chart_data = {
+        'close': close_list,
+        'open': open_list,
+        'name': event_name
+    }
+    # chart_data = json.dumps(chart_data)
+
+    return chart_data

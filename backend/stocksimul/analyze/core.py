@@ -7,7 +7,7 @@ import pandas
 
 class Core:
     def __init__(self):
-        self.dart = OpenDartReader(stockConfig.OPEN_DART_API_KEY)
+        # self.dart = OpenDartReader(stockConfig.OPEN_DART_API_KEY)
         pass
 
     def stock_table(self, event_name, start_date, end_date):

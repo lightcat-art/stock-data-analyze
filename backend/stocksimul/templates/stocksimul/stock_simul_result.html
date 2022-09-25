@@ -1,4 +1,5 @@
 {% load static %}
+{% load stocksimul_tt %}
 <html>
 <head>
     <title>주식 일봉 시뮬레이션</title>
@@ -12,19 +13,118 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">
+
+    <script src="https://code.highcharts.com/stock/highstock.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/data.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/export-data.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/accessibility.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 </head>
 <body>
 <div class="page-header">
     <h1><a href="/">주식 일봉 시뮬레이션</a></h1>
 </div>
-<div class="content container">
+<div id="content container">
     <div class="row">
         <div class="col-md-8">
-            <h1>주식 시뮬레이션 결과 페이지</h1>
+            <h1>주식 시뮬레이션 결과</h1>
             {{ code_df|safe }}
+            <h1>주식 시뮬레이션 차트 결과</h1>
+            {% for key, value in chart_data.items %}
+                <p>Key {{ key }}, Value {{ value }}</p>
+            {% endfor %}
+            <br>
+            {{ chart_data|get_value:"name" }}
         </div>
     </div>
+</div>
+<div class="row">
+    <div class="col-md-8">
+        <h1>주식 시뮬레이션 차트 결과</h1>
+    </div>
+</div>
+<div id="container">
+    <script>
+        Highcharts.setOptions({
+            global: {
+                useUTC: false
+            }
+        });
+        Highcharts.stockChart("container", {
+            chart: {
+                height: 500
+            },
+            title: {
+                text: '{{ chart_data|get_value:"name" }}',
+            },
+            rangeSelector: {
+                selected: 5,
+                inputEnabled: false
+            },
 
+            xAxis: {
+                type: 'date',
+                labels: {
+                    formatter: function(){
+                        return Highcharts.dateFormat('%y.%m.%d', this.value);
+                    },
+                    step: 3
+                }
+            },
+            yAxis: {
+                labels: {
+                    format: '{value}',
+                    style: {
+                        color: 'rgba(0,0,0, .6)',
+                    },
+                    x: 30,
+                },
+                opposite: false,
+                tickInterval: 50,
+            },
+            tooltip: {
+                xDateFormat: '%Y-%m-%d',
+                split: true
+            },
+            series: [{
+                name: '시가',
+                data: {{ chart_data|get_value:"open" }},
+                color: 'rgba(0,200,0,.6)',
+                lineWidth: 2
+            },
+            {
+                name: '종가',
+                data: {{ chart_data|get_value:"close" }},
+                lineWidth: 3
+            }],
+            legend: {
+                enabled: true,
+                align: 'left',
+                verticalAlign: 'top',
+                floating: true,
+                x: 30,
+                y: 70
+            },
+            responsive: {
+                rules: [{
+                    condition: {
+                        maxWidth: 600
+                    },
+                    chartOptions: {
+                        chart: {
+                            height: 300
+                        },
+                        navigator: {
+                            enabled: true
+                        }
+                    }
+                }]
+            }
+        });
+
+
+    </script>
 </div>
 </body>
 </html>
