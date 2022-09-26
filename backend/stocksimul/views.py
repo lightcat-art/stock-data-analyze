@@ -90,7 +90,7 @@ def update_stock_price(event_info):
                 entry.stock_event_id = event_info.stock_event_id
                 entry.save()
     else:
-        print("event_info_status doesn't have to update. last modify date is {}".format(event_info_status[0].mod_dt))
+        print("event_info_status doesn't have to update. last modify date is {}".format(price_info_status[0].mod_dt))
 
 def update_event_info(start_date):
     '''
