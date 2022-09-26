@@ -9,5 +9,5 @@ register = template.Library()
 @register.filter
 def get_value(dictionary, key):
     value = dictionary[key]
-    print('template get_value=',value)
+    # print('template get_value=',value)
     return value

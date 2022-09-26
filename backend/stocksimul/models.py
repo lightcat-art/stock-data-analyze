@@ -28,6 +28,7 @@ class StockEvent(models.Model):
 
 
 class StockSimulResult(models.Model):
+    # 데이터 누락을 방지하기 위해 fk 설정
     stock_simul_param = models.ForeignKey("StockSimulParam", on_delete=models.CASCADE)
     stock_event = models.ForeignKey("StockEvent", on_delete=models.CASCADE)
     max_rate = models.FloatField(default=0)
@@ -39,6 +40,7 @@ class StockSimulResult(models.Model):
 class StockPrice(models.Model):
     # 기본적으로 django가 auto-increment id를 생성하기 때문에, 명시적으로 생성할 pk에는 primary_key 옵션을 넣어주어야 한다.
     stock_price_id = models.BigAutoField(primary_key=True)
+    # 데이터 누락을 방지하기 위해 fk 설정
     stock_event = models.ForeignKey("StockEvent", on_delete=models.CASCADE)
     date = models.DateField()
     open = models.IntegerField(default=-1, null=True)
@@ -56,8 +58,7 @@ class StockPrice(models.Model):
 class StockInfoUpdateStatus(models.Model):
     stock_info_update_status_id = models.AutoField(primary_key=True)
     table_type = models.CharField(max_length=1)  # 'P' : 주가테이블, 'E' : 종목코드테이블
-    detail_info_1 = models.BigIntegerField(null=True)  # 각 테이블 filtering에 필요한 big integer 정보 입력
-    detail_info_2 = models.CharField(max_length=200, null=True)  # 각 테이블 filtering에 필요한 char 정보 입력
+    stock_event = models.ForeignKey("StockEvent", on_delete=models.CASCADE, null=True)
     mod_dt = models.DateField(default=timezone.now)
     reg_dt = models.DateField()
 

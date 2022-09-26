@@ -1,17 +1,14 @@
 import datetime
 from datetime import timedelta
 from time import strptime, mktime
-import json
+
 from django.db import transaction
-
 from django.shortcuts import render, get_object_or_404, redirect
-
-from .analyze.core import Core
-from .forms import StockSimulParamForm
-from .models import StockSimulParam
-from .models import StockPrice, StockInfoUpdateStatus, StockEvent
-from pykrx.website.krx.market import wrap
 from pykrx import stock
+from pykrx.website.krx.market import wrap
+
+from .forms import StockSimulParamForm
+from .models import StockPrice, StockInfoUpdateStatus, StockEvent, StockSimulParam
 
 
 def stock_simul_param(request):
@@ -28,63 +25,58 @@ def stock_simul_param(request):
 
 def stock_simul_result(request, pk):
     simul_param = get_object_or_404(StockSimulParam, pk=pk)
-    print(simul_param.start_date)
-    print(simul_param.days)
-    print(simul_param.event_name)
+    print('input param : start_date = {}'.format(simul_param.start_date))
+    print('input param : days = {}'.format(simul_param.days))
+    print('input param : event_name = {}'.format(simul_param.event_name))
 
     event_name = simul_param.event_name
-    end_date = (simul_param.start_date + timedelta(days=simul_param.days)).strftime('%Y%m%d')
     start_date = simul_param.start_date.strftime('%Y%m%d')
-    print(start_date)
-    print(end_date)
+    end_date = (simul_param.start_date + timedelta(days=simul_param.days)).strftime('%Y%m%d')
+    # print(start_date)
+    # print(end_date)
 
-    # 종목정보 업데이트 날짜주기
-    EVENT_INFO_UPDATE_PERIOD = 3
-
-    event_info_status = StockInfoUpdateStatus.objects.filter(table_type='E')
-    print('event_info_status={}'.format(event_info_status))
-    print('event_info_status count={}'.format(event_info_status.count()))
-    print('current time={}'.format(datetime.datetime.now()))
-    if event_info_status.count() != 0:
-        print('last mod date = {}'.format(event_info_status.mod_dt))
-        print(datetime.datetime.now() - event_info_status.mod_dt)
-
-    if event_info_status.count() == 0 or (datetime.datetime.now() - event_info_status.mod_dt) \
-            > timedelta(days=EVENT_INFO_UPDATE_PERIOD):
-        whole_code_df = wrap.get_market_ticker_and_name(date=start_date, market='ALL')
-        whole_code_df = [{'event_code': k, 'event_name': v} for k, v in whole_code_df.iteritems()]
-        print('1')
-        with transaction.atomic():
-            for item in whole_code_df:
-                entry = StockEvent(**item)
-                entry.save()
-        print('2')
-
-        if event_info_status.count() == 0:
-            status_dict = {'table_type': 'E', 'mod_dt': datetime.datetime.now(), 'reg_dt': datetime.datetime.now()}
-            event_info_status = StockInfoUpdateStatus(**status_dict)
-        else:
-            event_info_status.mod_dt = datetime.datetime.now()
-        event_info_status.save()
-        print('3')
-    else:
-        print("event_info_status doesn't have to update. last update date is {}".format(event_info_status.mod_dt))
+    update_event_info(start_date)
 
     event_info = get_object_or_404(StockEvent, event_name=event_name)
-    print('event_name={}, event_info={}'.format(event_name, event_info))
-    print('stock_event_id = {}'.format(event_info.stock_event_id))
+    # print('event_name={}, event_info={}'.format(event_name, event_info))
+    # print('stock_event_id = {}'.format(event_info.stock_event_id))
+
+    update_stock_price(event_info)
+
+    simul_start_date = datetime.datetime.strptime(start_date, '%Y%m%d')
+    simul_end_date = datetime.datetime.strptime(end_date, '%Y%m%d')
+    stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
+        .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
+
+    chart_data = make_chart_data(stocks, event_name)
+
+    return render(request, 'stocksimul/stock_simul_result.html', {'chart_data': chart_data})
+
+
+def update_stock_price(event_info):
+    '''
+    종목별 주가정보 업데이트
+    :param event_info: 특정 종목에 해당하는 StockEvent 모델 객체
+    :return:
+    '''
     # 종목별 주가정보 업데이트 날짜주기
     PRICE_INFO_UPDATE_PERIOD = 1
     today = datetime.datetime.now().strftime('%Y%m%d')
     price_info_status = StockInfoUpdateStatus.objects.filter(table_type='P') \
-        .filter(detail_info_1=event_info.stock_event_id)
-    if price_info_status.count() == 0 or (datetime.datetime.now() - price_info_status.mod_dt) \
+        .filter(stock_event_id=event_info.stock_event_id)
+    if price_info_status.count() == 0 or (datetime.date.today() - price_info_status[0].mod_dt) \
             > timedelta(days=PRICE_INFO_UPDATE_PERIOD):
         info_none_yn = price_info_status.count() == 0
         if info_none_yn:
             update_start_dt = '2000-01-01'
+            status_dict = {'table_type': 'P', 'mod_dt': datetime.date.today(), 'reg_dt': datetime.date.today(),
+                           'stock_event_id': event_info.stock_event_id}
+            price_info_status = StockInfoUpdateStatus(**status_dict)
         else:
-            update_start_dt = (price_info_status.mod_dt + timedelta(days=1)).strftime('%Y%m%d')
+            update_start_dt = (price_info_status[0].mod_dt + timedelta(days=1)).strftime('%Y%m%d')
+            price_info_status[0].mod_dt = datetime.date.today()
+        price_info_status.save()
+
         price_info_df = stock.get_market_ohlcv_by_date(update_start_dt, today, event_info.event_code)
         price_info_df = price_info_df.reset_index()
         price_info_df.rename(
@@ -97,15 +89,42 @@ def stock_simul_result(request, pk):
                 entry.event_code = event_info.event_code
                 entry.stock_event_id = event_info.stock_event_id
                 entry.save()
+    else:
+        print("event_info_status doesn't have to update. last modify date is {}".format(event_info_status[0].mod_dt))
 
-    simul_start_date = datetime.datetime.strptime(start_date, '%Y%m%d')
-    simul_end_date = datetime.datetime.strptime(end_date, '%Y%m%d')
-    stocks = StockPrice.objects.filter(event_code=event_info.event_code) \
-        .filter(date__gte=simul_start_date, date_lte=simul_end_date).order_by('date')
-
-    chart_data = make_chart_data(stocks, event_name)
-
-    return render(request, 'stocksimul/stock_simul_result.html', {'chart_data': chart_data})
+def update_event_info(start_date):
+    '''
+    전체 주식종목정보 업데이트
+    :param start_date: 시뮬레이션 시작날짜 입력값
+    :return:
+    '''
+    # 종목정보 업데이트 날짜주기
+    EVENT_INFO_UPDATE_PERIOD = 3
+    event_info_status = StockInfoUpdateStatus.objects.filter(table_type='E')
+    # print('event_info_status={}'.format(event_info_status))
+    # print('event_info_status count={}'.format(event_info_status.count()))
+    # print('current time={}'.format(datetime.datetime.now()))
+    if event_info_status.count() != 0:
+        print('last mod date = {}'.format(event_info_status[0].mod_dt))
+        print(datetime.date.today() - event_info_status[0].mod_dt)
+    if event_info_status.count() == 0 or (datetime.date.today() - event_info_status[0].mod_dt) \
+            > timedelta(days=EVENT_INFO_UPDATE_PERIOD):
+        whole_code_df = wrap.get_market_ticker_and_name(date=start_date, market='ALL')
+        whole_code_df = [{'event_code': k, 'event_name': v} for k, v in whole_code_df.iteritems()]
+        # 종목코드가 변경되는 경우, 상장폐지 되는 경우, 신규상장되는 경우를 고려하여 업데이트 쿼리 작성 필요.
+        # with transaction.atomic():
+        #     for item in whole_code_df:
+        #         entry = StockEvent(**item)
+        #         entry.save()
+        info_none_yn = event_info_status.count() == 0
+        if info_none_yn:
+            status_dict = {'table_type': 'E', 'mod_dt': datetime.datetime.now(), 'reg_dt': datetime.datetime.now()}
+            event_info_status = StockInfoUpdateStatus(**status_dict)
+        else:
+            event_info_status[0].mod_dt = datetime.datetime.now()
+        event_info_status.save()
+    else:
+        print("event_info_status doesn't have to update. last modify date is {}".format(event_info_status[0].mod_dt))
 
 
 # def stock_simul_graph(request, event_code, event_name):
