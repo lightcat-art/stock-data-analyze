@@ -3,7 +3,9 @@ from datetime import timedelta
 from time import strptime, mktime
 
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
 from pykrx import stock
 from pykrx.website.krx.market import wrap
 
@@ -14,8 +16,10 @@ from .models import StockPrice, StockInfoUpdateStatus, StockEvent, StockSimulPar
 def stock_simul_param(request):
     if request.method == "POST":
         form = StockSimulParamForm(request.POST)
+        # print('stock_simul_param input = ', form)
         if form.is_valid():  # 모든 필드에 값이 있어야 하고, 잘못된 값이 있다면 저장되지 않도록 체크.
             simul_param = form.save(commit=False)  # 폼을 저장하지만, 바로 모델에 저장하지 않도록 commit옵션 False
+            # print('stock_simul_param input = ', simul_param.event_name)
             simul_param.save()
             return redirect('stock_simul_result', pk=simul_param.pk)
     else:
@@ -62,20 +66,29 @@ def update_stock_price(event_info):
     # 종목별 주가정보 업데이트 날짜주기
     PRICE_INFO_UPDATE_PERIOD = 1
     today = datetime.datetime.now().strftime('%Y%m%d')
-    price_info_status = StockInfoUpdateStatus.objects.filter(table_type='P') \
+    price_info_status_qryset = StockInfoUpdateStatus.objects.filter(table_type='P') \
         .filter(stock_event_id=event_info.stock_event_id)
-    if price_info_status.count() == 0 or (datetime.date.today() - price_info_status[0].mod_dt) \
-            > timedelta(days=PRICE_INFO_UPDATE_PERIOD):
-        info_none_yn = price_info_status.count() == 0
+    # price_info_status = StockInfoUpdateStatus.objects.get(
+    #     Q(table_type='P') & Q(stock_event_id=event_info.stock_event_id))
+    if price_info_status_qryset.count() != 0:
+        print('update_stock_price : last mod date = {}'.format(price_info_status_qryset.first().mod_dt))
+        print('update_stock_price : date substract result = ',
+              datetime.date.today() - price_info_status_qryset.first().mod_dt)
+    if price_info_status_qryset.count() == 0 or (datetime.date.today() - price_info_status_qryset[0].mod_dt) \
+            >= timedelta(days=PRICE_INFO_UPDATE_PERIOD):
+        info_none_yn = price_info_status_qryset.count() == 0
         if info_none_yn:
             update_start_dt = '2000-01-01'
             status_dict = {'table_type': 'P', 'mod_dt': datetime.date.today(), 'reg_dt': datetime.date.today(),
                            'stock_event_id': event_info.stock_event_id}
-            price_info_status = StockInfoUpdateStatus(**status_dict)
+            price_info_status_model = StockInfoUpdateStatus(**status_dict)
+            price_info_status_model.save()
         else:
-            update_start_dt = (price_info_status[0].mod_dt + timedelta(days=1)).strftime('%Y%m%d')
-            price_info_status[0].mod_dt = datetime.date.today()
-        price_info_status.save()
+            update_start_dt = (price_info_status_qryset[0].mod_dt + timedelta(days=1)).strftime('%Y%m%d')
+            price_info_status_model = price_info_status_qryset.first()
+            price_info_status_model.mod_dt = datetime.date.today()
+            price_info_status_model.save()
+        print('2 price_info_status = ', price_info_status_qryset)
 
         price_info_df = stock.get_market_ohlcv_by_date(update_start_dt, today, event_info.event_code)
         price_info_df = price_info_df.reset_index()
@@ -90,7 +103,9 @@ def update_stock_price(event_info):
                 entry.stock_event_id = event_info.stock_event_id
                 entry.save()
     else:
-        print("event_info_status doesn't have to update. last modify date is {}".format(price_info_status[0].mod_dt))
+        print("price_info_status doesn't have to update. last modify date is {}"
+              .format(price_info_status_qryset.first().mod_dt))
+
 
 def update_event_info(start_date):
     '''
@@ -100,15 +115,16 @@ def update_event_info(start_date):
     '''
     # 종목정보 업데이트 날짜주기
     EVENT_INFO_UPDATE_PERIOD = 3
-    event_info_status = StockInfoUpdateStatus.objects.filter(table_type='E')
+    event_info_status_qryset = StockInfoUpdateStatus.objects.filter(table_type='E')
     # print('event_info_status={}'.format(event_info_status))
     # print('event_info_status count={}'.format(event_info_status.count()))
     # print('current time={}'.format(datetime.datetime.now()))
-    if event_info_status.count() != 0:
-        print('last mod date = {}'.format(event_info_status[0].mod_dt))
-        print(datetime.date.today() - event_info_status[0].mod_dt)
-    if event_info_status.count() == 0 or (datetime.date.today() - event_info_status[0].mod_dt) \
-            > timedelta(days=EVENT_INFO_UPDATE_PERIOD):
+    if event_info_status_qryset.count() != 0:
+        print('update_event_info : last mod date = {}'.format(event_info_status_qryset.first().mod_dt))
+        print('update_event_info : date substract result = ',
+              datetime.date.today() - event_info_status_qryset.first().mod_dt)
+    if event_info_status_qryset.count() == 0 or (datetime.date.today() - event_info_status_qryset.first().mod_dt) \
+            >= timedelta(days=EVENT_INFO_UPDATE_PERIOD):
         whole_code_df = wrap.get_market_ticker_and_name(date=start_date, market='ALL')
         whole_code_df = [{'event_code': k, 'event_name': v} for k, v in whole_code_df.iteritems()]
         # 종목코드가 변경되는 경우, 상장폐지 되는 경우, 신규상장되는 경우를 고려하여 업데이트 쿼리 작성 필요.
@@ -116,15 +132,18 @@ def update_event_info(start_date):
         #     for item in whole_code_df:
         #         entry = StockEvent(**item)
         #         entry.save()
-        info_none_yn = event_info_status.count() == 0
+        info_none_yn = event_info_status_qryset.count() == 0
         if info_none_yn:
             status_dict = {'table_type': 'E', 'mod_dt': datetime.datetime.now(), 'reg_dt': datetime.datetime.now()}
-            event_info_status = StockInfoUpdateStatus(**status_dict)
+            event_info_status_model = StockInfoUpdateStatus(**status_dict)
+            event_info_status_model.save()
         else:
-            event_info_status[0].mod_dt = datetime.datetime.now()
-        event_info_status.save()
+            event_info_status_model = event_info_status_qryset.first()
+            event_info_status_model.mod_dt = datetime.date.today()
+            event_info_status_model.save()
     else:
-        print("event_info_status doesn't have to update. last modify date is {}".format(event_info_status[0].mod_dt))
+        print("event_info_status doesn't have to update. last modify date is {}"
+              .format(event_info_status_qryset.first().mod_dt))
 
 
 # def stock_simul_graph(request, event_code, event_name):
