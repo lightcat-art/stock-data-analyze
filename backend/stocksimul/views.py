@@ -14,7 +14,11 @@ from .models import StockPrice, StockInfoUpdateStatus, StockEvent, StockSimulPar
 
 
 def stock_simul_param(request):
+    event_list = StockEvent.objects.all
+    # event_list = (('삼성전자','삼성전자'),('삼성생명','삼성생명'))
+    # print('event_list = ',event_list)
     if request.method == "POST":
+        print(request.POST)
         form = StockSimulParamForm(request.POST)
         # print('stock_simul_param input = ', form)
         if form.is_valid():  # 모든 필드에 값이 있어야 하고, 잘못된 값이 있다면 저장되지 않도록 체크.
@@ -24,7 +28,7 @@ def stock_simul_param(request):
             return redirect('stock_simul_result', pk=simul_param.pk)
     else:
         form = StockSimulParamForm()
-    return render(request, 'stocksimul/stock_simul_param.html', {'form': form})
+    return render(request, 'stocksimul/stock_simul_param.html', {'form': form, 'show_event':event_list})
 
 
 def stock_simul_result(request, pk):

@@ -3,8 +3,8 @@
 <head>
     <title>주식 일봉 시뮬레이션</title>
     <!-- bootstrap 설치 -->
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/5.2.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/5.2.1/css/bootstrap-theme.min.css">
     <!-- css파일 import -->
     <link rel="stylesheet" href="{% static 'css/stocksimul.css' %}">
     <!-- font -->
@@ -21,10 +21,41 @@
     <div class="row">
         <div class="col-md-8">
             <h1>정보 입력</h1>
-            <!-- Form을 제출할때 같은 뷰를 다시 불러옴. 이때 request에는 우리가 입력했던 데이터를 request.POST에 가지고 있음.-->
-            <form method="POST" class="post-form">{% csrf_token %}
-                {{ form.as_p }}
+<!--             Form을 제출할때 같은 뷰를 다시 불러옴. 이때 request에는 우리가 입력했던 데이터를 request.POST에 가지고 있음.-->
+            <form action="" method="POST" class="post-form">{% csrf_token %}
+<!--                 입력받은 modelForm 내 field를 불러와 loop 수행-->
+                {% for field in form %}
+                <div class="fieldWrapper">
+                    {% if field.help_text %}
+                        <p class="help">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                     {{ field.errors }}
+                    {% if field == form.event_name %} <!-- searchable select 를 수행하려는 form 내 필드 지정 -->
+<!--                     forms.py에서 지정한 label_tag를 출력 -->
+<!--                        {{ field.label_tag}} -->
+                        <!-- name attribute는 form 내 searchable dropdown 목적의 필드명과 같아야 함. -->
+                        <!-- input tag의 list attribute는 datalist tag의 id 와 같아야 함 -->
+                        <input type="text" list="eventlist" name="event_name" placeholder="종목 검색" style="width:150px;">
+                        <datalist id="eventlist">
+                            <!-- searchable dropdown 만들 데이터 생성 -->
+                            {% for event in show_event %}
+                                <option value="{{ event.event_name }}">{{ event.event_name }}</option>
+<!--                                <option value="{{ event.0 }}">{{ event.1 }}</option>-->
+                            {% endfor %}
+                        </datalist>
+                    {% else %}
+<!--                        searchable select 가 아닌 다른 field의 경우-->
+<!--                        {{ field.label_tag }} -->
+                        {{ field }}
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <br/>
+<!--                <p>{{ form.event_name }}</p>-->
+<!--                <p>{{ form.start_date }}</p>-->
+<!--                <p>{{ form.days }}</p>-->
                 <button type="submit" class="submit btn btn-default">Submit</button>
+<!--                <input type="submit" value="submit">-->
             </form>
         </div>
     </div>
