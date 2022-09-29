@@ -9,9 +9,9 @@ class StockSimulParam(models.Model):
     # 글자수가 제한된 텍스트 정의 ( 글 제목같은 짧은 문자열)
     event_name = models.CharField(max_length=200, help_text="종목명을 입력하세요")
     # 시뮬레이션 기간
-    days = models.PositiveIntegerField(default=1, help_text="시작날짜로부터 조회할 기간을 선택하세요")
+    days = models.PositiveIntegerField(help_text="시작날짜로부터 조회할 기간을 선택하세요")
     # 날짜와 시간 정의
-    start_date = models.DateTimeField(default=timezone.now, help_text="시작날짜를 선택하세요")
+    start_date = models.DateField(help_text="시작날짜를 선택하세요")
 
     def __str__(self):
         return self.event_name

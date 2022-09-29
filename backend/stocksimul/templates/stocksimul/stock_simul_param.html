@@ -1,28 +1,35 @@
-{% load static %}
-<html>
-<head>
-    <title>주식 일봉 시뮬레이션</title>
-    <!-- bootstrap 설치 -->
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/5.2.1/css/bootstrap.min.css">
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/5.2.1/css/bootstrap-theme.min.css">
-    <!-- css파일 import -->
-    <link rel="stylesheet" href="{% static 'css/stocksimul.css' %}">
-    <!-- font -->
-    <link href="//fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext" rel="stylesheet" type="text/css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">
-</head>
-<body>
-<div class="page-header">
-    <h1><a href="/">주식 일봉 시뮬레이션</a></h1>
-</div>
+{% extends 'stocksimul/base.html' %}
+<!--{% load static %}-->
+<!--<html>-->
+<!--<head>-->
+<!--    <title>주식 일봉 시뮬레이션</title>-->
+<!--    &lt;!&ndash; bootstrap &ndash;&gt;-->
+<!--    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/5.2.1/css/bootstrap.min.css">-->
+<!--    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/5.2.1/css/bootstrap-theme.min.css">-->
+<!--    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"-->
+<!--          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">-->
+<!--    &lt;!&ndash; css파일 &ndash;&gt;-->
+<!--    <link rel="stylesheet" href="{% static 'css/stocksimul.css' %}">-->
+<!--    &lt;!&ndash; font &ndash;&gt;-->
+<!--    <link href="//fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext" rel="stylesheet" type="text/css">-->
+<!--    <link rel="preconnect" href="https://fonts.googleapis.com">-->
+<!--    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>-->
+<!--    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">-->
+<!--</head>-->
+<!--<body>-->
+<!--<div class="page-header">-->
+<!--    <h1><a href="/">주식 일봉 시뮬레이션</a></h1>-->
+<!--</div>-->
+{% block content %}
 <div class="content container">
     <div class="row">
         <div class="col-md-8">
+            <br/>
+            <br/>
             <h1>정보 입력</h1>
+            <p></p>
 <!--             Form을 제출할때 같은 뷰를 다시 불러옴. 이때 request에는 우리가 입력했던 데이터를 request.POST에 가지고 있음.-->
-            <form action="" method="POST" class="post-form">{% csrf_token %}
+            <form action="" method="POST" class="form-signin">{% csrf_token %}
 <!--                 입력받은 modelForm 내 field를 불러와 loop 수행-->
                 {% for field in form %}
                 <div class="fieldWrapper">
@@ -35,11 +42,12 @@
 <!--                        {{ field.label_tag}} -->
                         <!-- name attribute는 form 내 searchable dropdown 목적의 필드명과 같아야 함. -->
                         <!-- input tag의 list attribute는 datalist tag의 id 와 같아야 함 -->
-                        <input type="text" list="eventlist" name="event_name" placeholder="종목 검색" style="width:150px;">
+                        <input type="text" list="eventlist" class="form-control"
+                               name="event_name" placeholder="종목 검색" style="width:150px;">
                         <datalist id="eventlist">
                             <!-- searchable dropdown 만들 데이터 생성 -->
                             {% for event in show_event %}
-                                <option value="{{ event.event_name }}">{{ event.event_name }}</option>
+                                <option value="{{ event.event_name }}">{{ event.event_code }}</option>
 <!--                                <option value="{{ event.0 }}">{{ event.1 }}</option>-->
                             {% endfor %}
                         </datalist>
@@ -49,17 +57,18 @@
                         {{ field }}
                     {% endif %}
                 </div>
-                {% endfor %}
                 <br/>
+                {% endfor %}
 <!--                <p>{{ form.event_name }}</p>-->
 <!--                <p>{{ form.start_date }}</p>-->
 <!--                <p>{{ form.days }}</p>-->
-                <button type="submit" class="submit btn btn-default">Submit</button>
-<!--                <input type="submit" value="submit">-->
+<!--                <button type="submit" class="submit btn btn-default">Submit</button>-->
+                <input type="submit" value="조회">
             </form>
         </div>
     </div>
 
 </div>
-</body>
-</html>
+{% endblock %}
+<!--</body>-->
+<!--</html>-->
