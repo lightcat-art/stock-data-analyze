@@ -1,8 +1,10 @@
 import datetime
+import json
 from datetime import timedelta
 from time import strptime, mktime
 
 from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from pykrx import stock
 from pykrx.website.krx.market import wrap
@@ -57,7 +59,8 @@ def stock_simul_result(request, pk):
     chart_data, gui_ohlc, gui_volume, gui_whole = make_chart_data(stocks, event_name)
 
     return render(request, 'stocksimul/stock_simul_result.html', {'chart_data': chart_data, 'gui_ohlc':gui_ohlc,
-                                                                  'gui_volume':gui_volume, 'gui_whole':gui_whole})
+                                                                  'gui_volume':gui_volume, 'gui_whole':gui_whole,
+                                                                  'event_name':event_name})
 
 
 def update_stock_price(event_info):
@@ -154,8 +157,13 @@ def update_event_info(start_date):
 #     chart_data = make_chart_data(stocks, event_name)
 #     return chart_data
 
-def send_chart_data():
-    pass
+def ajax_chart_data(request):
+    print('ajax_chart_data start')
+    # print('ajax_chart_data : event_name = {}'.format(event_name))
+    print('ajax_chart_data : request body :', request.body)
+
+    data = {'whole': [[123124124, 2324, 2323, 2323, 2323, 2323]]}
+    return JsonResponse(data)
 
 def make_chart_data(stocks, event_name):
     '''
