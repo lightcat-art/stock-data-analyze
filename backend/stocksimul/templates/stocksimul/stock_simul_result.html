@@ -2,31 +2,6 @@
 <!--{% load static %}-->
 {% load stocksimul_tt %}
 
-<!--<html>-->
-<!--<head>-->
-<!--    <title>주식 일봉 시뮬레이션</title>-->
-<!--    &lt;!&ndash; bootstrap 설치 &ndash;&gt;-->
-<!--    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/5.2.1/css/bootstrap.min.css">-->
-<!--    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/5.2.1/css/bootstrap-theme.min.css">-->
-<!--    &lt;!&ndash; css파일 import &ndash;&gt;-->
-<!--    <link rel="stylesheet" href="{% static 'css/stocksimul.css' %}">-->
-<!--    &lt;!&ndash; font &ndash;&gt;-->
-<!--    <link href="//fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext" rel="stylesheet" type="text/css">-->
-<!--    <link rel="preconnect" href="https://fonts.googleapis.com">-->
-<!--    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>-->
-<!--    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">-->
-
-<!--    <script src="https://code.highcharts.com/stock/highstock.js"></script>-->
-<!--    <script src="https://code.highcharts.com/stock/modules/data.js"></script>-->
-<!--    <script src="https://code.highcharts.com/stock/modules/exporting.js"></script>-->
-<!--    <script src="https://code.highcharts.com/stock/modules/export-data.js"></script>-->
-<!--    <script src="https://code.highcharts.com/stock/modules/accessibility.js"></script>-->
-<!--    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>-->
-<!--</head>-->
-<!--<body>-->
-<!--<div class="page-header">-->
-<!--    <h1><a href="/">주식 일봉 시뮬레이션</a></h1>-->
-<!--</div>-->
 {% block content %}
 <div class="result header">
     <div class="row">
@@ -37,88 +12,300 @@
         </div>
     </div>
 </div>
-<div id="container">
+<!--<div id="container 1">-->
+<!--    <script>-->
+<!--        Highcharts.setOptions({-->
+<!--            global: {-->
+<!--                useUTC: false-->
+<!--            }-->
+<!--        });-->
+<!--        Highcharts.stockChart("container", {-->
+<!--            chart: {-->
+<!--                height: 500-->
+<!--            },-->
+<!--            title: {-->
+<!--                text: '{{ chart_data|get_value:"name" }}',-->
+<!--            },-->
+<!--            rangeSelector: {-->
+<!--                selected: 5,-->
+<!--                inputEnabled: false-->
+<!--            },-->
+
+<!--            xAxis: {-->
+<!--                type: 'date',-->
+<!--                labels: {-->
+<!--                    formatter: function(){-->
+<!--                        return Highcharts.dateFormat('%y.%m.%d', this.value);-->
+<!--                    },-->
+<!--                    step: 3-->
+<!--                }-->
+<!--            },-->
+<!--            yAxis: {-->
+<!--                labels: {-->
+<!--                    format: '{value}',-->
+<!--                    style: {-->
+<!--                        color: 'rgba(0,0,0, .6)',-->
+<!--                    },-->
+<!--                    x: 30,-->
+<!--                },-->
+<!--                opposite: false,-->
+<!--                tickInterval: 50,-->
+<!--            },-->
+<!--            tooltip: {-->
+<!--                xDateFormat: '%Y-%m-%d',-->
+<!--                split: true-->
+<!--            },-->
+<!--            series: [{-->
+<!--                name: '시가',-->
+<!--                data: {{ chart_data|get_value:"open" }},-->
+<!--                color: 'rgba(0,200,0,.6)',-->
+<!--                lineWidth: 2-->
+<!--            },-->
+<!--            {-->
+<!--                name: '종가',-->
+<!--                data: {{ chart_data|get_value:"close" }},-->
+<!--                lineWidth: 3-->
+<!--            }],-->
+<!--            legend: {-->
+<!--                enabled: true,-->
+<!--                align: 'left',-->
+<!--                verticalAlign: 'top',-->
+<!--                floating: true,-->
+<!--                x: 30,-->
+<!--                y: 70-->
+<!--            },-->
+<!--            responsive: {-->
+<!--                rules: [{-->
+<!--                    condition: {-->
+<!--                        maxWidth: 600-->
+<!--                    },-->
+<!--                    chartOptions: {-->
+<!--                        chart: {-->
+<!--                            height: 300-->
+<!--                        },-->
+<!--                        navigator: {-->
+<!--                            enabled: true-->
+<!--                        }-->
+<!--                    }-->
+<!--                }]-->
+<!--            }-->
+<!--        });-->
+
+
+<!--    </script>-->
+<!--</div>-->
+
+<!-- 직접 template data를 사용하여 출력 -->
+<div id="container-1" class="chart">
     <script>
-        Highcharts.setOptions({
-            global: {
-                useUTC: false
-            }
-        });
-        Highcharts.stockChart("container", {
-            chart: {
-                height: 500
-            },
-            title: {
-                text: '{{ chart_data|get_value:"name" }}',
-            },
-            rangeSelector: {
-                selected: 5,
-                inputEnabled: false
-            },
+        var ohlc = [],
+            volume = [],
+            dataLength = {{ gui_ohlc|length }}
+            i = 0;
+        {% for item in gui_whole %}
+<!--            {{ forloop.counter0 }}-->
+            ohlc.push([
+                {{item.0}}, // date
+                {{item.1}}, // open
+                {{item.2}}, // high
+                {{item.3}}, // low
+                {{item.4}} // close
+            ]);
+            volume.push([
+                {{item.0}}, // date
+                {{item.5}} //the volume
+            ]);
+        {% endfor %}
 
-            xAxis: {
-                type: 'date',
-                labels: {
-                    formatter: function(){
-                        return Highcharts.dateFormat('%y.%m.%d', this.value);
-                    },
-                    step: 3
+        Highcharts.stockChart('container-1', {
+        yAxis: [{
+            labels: {
+                align: 'left'
+            },
+            height: '80%',
+            resize: {
+                enabled: true
+            }
+        }, {
+            labels: {
+                align: 'left'
+            },
+            top: '80%',
+            height: '20%',
+            offset: 0
+        }],
+        tooltip: {
+            shape: 'square',
+            headerShape: 'callout',
+            borderWidth: 0,
+            shadow: false,
+            positioner: function (width, height, point) {
+                var chart = this.chart,
+                    position;
+
+                if (point.isHeader) {
+                    position = {
+                        x: Math.max(
+                            // Left side limit
+                            chart.plotLeft,
+                            Math.min(
+                                point.plotX + chart.plotLeft - width / 2,
+                                // Right side limit
+                                chart.chartWidth - width - chart.marginRight
+                            )
+                        ),
+                        y: point.plotY
+                    };
+                } else {
+                    position = {
+                        x: point.series.chart.plotLeft,
+                        y: point.series.yAxis.top - chart.plotTop
+                    };
                 }
-            },
-            yAxis: {
-                labels: {
-                    format: '{value}',
-                    style: {
-                        color: 'rgba(0,0,0, .6)',
-                    },
-                    x: 30,
-                },
-                opposite: false,
-                tickInterval: 50,
-            },
-            tooltip: {
-                xDateFormat: '%Y-%m-%d',
-                split: true
-            },
-            series: [{
-                name: '시가',
-                data: {{ chart_data|get_value:"open" }},
-                color: 'rgba(0,200,0,.6)',
-                lineWidth: 2
-            },
-            {
-                name: '종가',
-                data: {{ chart_data|get_value:"close" }},
-                lineWidth: 3
-            }],
-            legend: {
-                enabled: true,
-                align: 'left',
-                verticalAlign: 'top',
-                floating: true,
-                x: 30,
-                y: 70
-            },
-            responsive: {
-                rules: [{
-                    condition: {
-                        maxWidth: 600
-                    },
-                    chartOptions: {
-                        chart: {
-                            height: 300
-                        },
-                        navigator: {
-                            enabled: true
-                        }
-                    }
-                }]
+
+                return position;
             }
+        },
+        series: [{
+            type: 'ohlc',
+            id: 'aapl-ohlc',
+            name: 'AAPL Stock Price',
+            data: ohlc
+        }, {
+            type: 'column',
+            id: 'aapl-volume',
+            name: 'AAPL Volume',
+            data: volume,
+            yAxis: 1
+        }],
+        responsive: {
+            rules: [{
+                condition: {
+                    maxWidth: 800
+                },
+                chartOptions: {
+                    rangeSelector: {
+                        inputEnabled: false
+                    }
+                }
+            }]
+        }
         });
-
-
     </script>
 </div>
+
+<!-- highchart 샘플 데이터를 받아와 출력 -->
+<div id="container-3" class="chart">
+    <script>
+    console.log('container-3 start')
+    Highcharts.getJSON('https://demo-live-data.highcharts.com/aapl-ohlcv.json', function (data) {
+
+  // split the data set into ohlc and volume
+    var ohlc = [],
+    volume = [],
+    dataLength = data.length,
+    i = 0;
+    console.log(data[1][0])
+    console.log(data[1][1])
+    console.log(data[1][2])
+    console.log(data[1][3])
+    console.log(data[1][4])
+    console.log(typeof(data[1][0]))
+    console.log(typeof(data[1][1]))
+    console.log(typeof(data[1][2]))
+    console.log(typeof(data[1][3]))
+    console.log(typeof(data[1][4]))
+  for (i; i < dataLength; i += 1) {
+    ohlc.push([
+      data[i][0], // the date
+      data[i][1], // open
+      data[i][2], // high
+      data[i][3], // low
+      data[i][4] // close
+    ]);
+
+    volume.push([
+      data[i][0], // the date
+      data[i][5] // the volume
+    ]);
+  }
+
+  Highcharts.stockChart('container-3', {
+    yAxis: [{
+      labels: {
+        align: 'left'
+      },
+      height: '80%',
+      resize: {
+        enabled: true
+      }
+    }, {
+      labels: {
+        align: 'left'
+      },
+      top: '80%',
+      height: '20%',
+      offset: 0
+    }],
+    tooltip: {
+      shape: 'square',
+      headerShape: 'callout',
+      borderWidth: 0,
+      shadow: false,
+      positioner: function (width, height, point) {
+        var chart = this.chart,
+          position;
+
+        if (point.isHeader) {
+          position = {
+            x: Math.max(
+              // Left side limit
+              chart.plotLeft,
+              Math.min(
+                point.plotX + chart.plotLeft - width / 2,
+                // Right side limit
+                chart.chartWidth - width - chart.marginRight
+              )
+            ),
+            y: point.plotY
+          };
+        } else {
+          position = {
+            x: point.series.chart.plotLeft,
+            y: point.series.yAxis.top - chart.plotTop
+          };
+        }
+
+        return position;
+      }
+    },
+    series: [{
+      type: 'ohlc',
+      id: 'aapl-ohlc',
+      name: 'AAPL Stock Price',
+      data: ohlc
+    }, {
+      type: 'column',
+      id: 'aapl-volume',
+      name: 'AAPL Volume',
+      data: volume,
+      yAxis: 1
+    }],
+    responsive: {
+      rules: [{
+        condition: {
+          maxWidth: 800
+        },
+        chartOptions: {
+          rangeSelector: {
+            inputEnabled: false
+          }
+        }
+      }]
+    }
+  });
+});
+    </script>
+</div>
+
 {% endblock %}
-<!--</body>-->
-<!--</html>-->

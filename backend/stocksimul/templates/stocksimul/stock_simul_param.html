@@ -1,25 +1,4 @@
 {% extends 'stocksimul/base.html' %}
-<!--{% load static %}-->
-<!--<html>-->
-<!--<head>-->
-<!--    <title>주식 일봉 시뮬레이션</title>-->
-<!--    &lt;!&ndash; bootstrap &ndash;&gt;-->
-<!--    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/5.2.1/css/bootstrap.min.css">-->
-<!--    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/5.2.1/css/bootstrap-theme.min.css">-->
-<!--    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"-->
-<!--          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">-->
-<!--    &lt;!&ndash; css파일 &ndash;&gt;-->
-<!--    <link rel="stylesheet" href="{% static 'css/stocksimul.css' %}">-->
-<!--    &lt;!&ndash; font &ndash;&gt;-->
-<!--    <link href="//fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext" rel="stylesheet" type="text/css">-->
-<!--    <link rel="preconnect" href="https://fonts.googleapis.com">-->
-<!--    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>-->
-<!--    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">-->
-<!--</head>-->
-<!--<body>-->
-<!--<div class="page-header">-->
-<!--    <h1><a href="/">주식 일봉 시뮬레이션</a></h1>-->
-<!--</div>-->
 {% block content %}
 <div class="content container">
     <div class="row">
@@ -63,12 +42,11 @@
 <!--                <p>{{ form.start_date }}</p>-->
 <!--                <p>{{ form.days }}</p>-->
 <!--                <button type="submit" class="submit btn btn-default">Submit</button>-->
-                <input type="submit" value="조회">
+<!--                <input type="submit" value="조회">-->
+                <button class="btn btn-lg btn-primary btn-block" type="submit"
+                 style="width:150px">Check</button>
             </form>
         </div>
     </div>
-
 </div>
 {% endblock %}
-<!--</body>-->
-<!--</html>-->

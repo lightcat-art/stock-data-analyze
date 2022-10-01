@@ -11,3 +11,8 @@ def get_value(dictionary, key):
     value = dictionary[key]
     # print('template get_value=',value)
     return value
+
+
+@register.filter
+def index(indexable, i):
+    return indexable[i]

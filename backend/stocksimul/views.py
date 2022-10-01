@@ -3,9 +3,7 @@ from datetime import timedelta
 from time import strptime, mktime
 
 from django.db import transaction
-from django.db.models import Q
 from django.shortcuts import render, get_object_or_404, redirect
-from django.utils import timezone
 from pykrx import stock
 from pykrx.website.krx.market import wrap
 
@@ -56,9 +54,10 @@ def stock_simul_result(request, pk):
     stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
         .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
 
-    chart_data = make_chart_data(stocks, event_name)
+    chart_data, gui_ohlc, gui_volume, gui_whole = make_chart_data(stocks, event_name)
 
-    return render(request, 'stocksimul/stock_simul_result.html', {'chart_data': chart_data})
+    return render(request, 'stocksimul/stock_simul_result.html', {'chart_data': chart_data, 'gui_ohlc':gui_ohlc,
+                                                                  'gui_volume':gui_volume, 'gui_whole':gui_whole})
 
 
 def update_stock_price(event_info):
@@ -155,6 +154,8 @@ def update_event_info(start_date):
 #     chart_data = make_chart_data(stocks, event_name)
 #     return chart_data
 
+def send_chart_data():
+    pass
 
 def make_chart_data(stocks, event_name):
     '''
@@ -162,14 +163,27 @@ def make_chart_data(stocks, event_name):
     :param event_name: 종목명
     :return:
     '''
+    print('make chart data start')
     chart_data = {}
     close_list = []
     open_list = []
+
+    gui_ohlc = []
+    gui_volume = []
+    gui_whole = []
+    print('make chart data : stocks = {}'.format(stocks))
     for stock in stocks:
+        print('make chart data : stock = {}'.format(stock))
         time_tuple = strptime(str(stock.date), '%Y-%m-%d')
         utc_now = mktime(time_tuple) * 1000
+        print(utc_now)
         close_list.append([utc_now, stock.close])
         open_list.append([utc_now, stock.open])
+
+        gui_ohlc.append([utc_now, stock.open, stock.close, 9999, 8888])  # the date, open, high, low, close
+        gui_volume.append([utc_now, 7777])
+
+        gui_whole.append([utc_now, stock.open, 9999, 8888, stock.close, 777777])
 
     # chart_data = {
     #     'chart': {'height': 500},
@@ -189,4 +203,4 @@ def make_chart_data(stocks, event_name):
     }
     # chart_data = json.dumps(chart_data)
 
-    return chart_data
+    return chart_data, gui_ohlc, gui_volume, gui_whole
