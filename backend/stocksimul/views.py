@@ -51,16 +51,14 @@ def stock_simul_result(request, pk):
 
     update_stock_price(event_info)
 
-    simul_start_date = datetime.datetime.strptime(start_date_str, '%Y%m%d')
-    simul_end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d')
-    stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
-        .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
+    # simul_start_date = datetime.datetime.strptime(start_date_str, '%Y%m%d')
+    # simul_end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d')
+    # stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
+    #     .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
 
-    chart_data, gui_ohlc, gui_volume, gui_whole = make_chart_data(stocks, event_name)
+    # chart_data, gui_ohlc, gui_volume, gui_whole = make_chart_data(stocks, event_name)
 
-    return render(request, 'stocksimul/stock_simul_result.html', {'gui_ohlc': gui_ohlc,
-                                                                  'gui_volume': gui_volume, 'gui_whole': gui_whole,
-                                                                  'event_name': event_name,
+    return render(request, 'stocksimul/stock_simul_result.html', {'event_name': event_name,
                                                                   'start_date_str':start_date_str,
                                                                   'end_date_str':end_date_str})
 
@@ -86,7 +84,6 @@ def ajax_chart_data(request):
     ajax_gui_whole = []
     print('ajax_chart_data : stocks = {}'.format(stocks))
     for stock in stocks:
-        print('ajax_chart_data : stock = {}'.format(stock))
         time_tuple = strptime(str(stock.date), '%Y-%m-%d')
         utc_now = mktime(time_tuple) * 1000
         ajax_gui_whole.append([utc_now, stock.open, stock.high, stock.low, stock.close, stock.volume])
@@ -219,10 +216,8 @@ def make_chart_data(stocks, event_name):
     gui_whole = []
     print('make chart data : stocks = {}'.format(stocks))
     for stock in stocks:
-        print('make chart data : stock = {}'.format(stock))
         time_tuple = strptime(str(stock.date), '%Y-%m-%d')
         utc_now = mktime(time_tuple) * 1000
-        print(utc_now)
         close_list.append([utc_now, stock.close])
         open_list.append([utc_now, stock.open])
 
