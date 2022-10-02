@@ -131,23 +131,27 @@
         success: function(data){
 
         console.log('ajax response data = ', data)
+        console.log('ajax response data length = ', data.chart_data.length)
+        console.log('ajax response chart data = ', data.chart_data)
+        console.log('ajax response chart data 0 = ', data.chart_data[0])
         var ohlc = [],
             volume = [],
-            dataLength = {{ gui_ohlc|length }}
+            dataLength = data.chart_data.length,
             i = 0;
-        {% for item in gui_whole %}
+        for (i; i < dataLength; i += 1) {
             ohlc.push([
-                {{item.0}}, // date
-                {{item.1}}, // open
-                {{item.2}}, // high
-                {{item.3}}, // low
-                {{item.4}} // close
+                data.chart_data[i][0], // the date
+                data.chart_data[i][1], // open
+                data.chart_data[i][2], // high
+                data.chart_data[i][3], // low
+                data.chart_data[i][4] // close
             ]);
+
             volume.push([
-                {{item.0}}, // date
-                {{item.5}} //the volume
+                data.chart_data[i][0], // the date
+                data.chart_data[i][5] // the volume
             ]);
-        {% endfor %}
+        }
 
         Highcharts.stockChart('container-2', {
         yAxis: [{
