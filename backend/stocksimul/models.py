@@ -52,6 +52,8 @@ class StockPrice(models.Model):
     high = models.IntegerField(default=-1, null=True)
     low = models.IntegerField(default=-1, null=True)
     volume = models.IntegerField(default=-1, null=True)
+    value = models.BigIntegerField(default=-1, null=True)
+    up_down_rate = models.FloatField(default=0, null=True)
 
     objects = models.Manager()
 
@@ -63,6 +65,9 @@ class StockInfoUpdateStatus(models.Model):
     stock_info_update_status_id = models.AutoField(primary_key=True)
     table_type = models.CharField(max_length=1)  # 'P' : 주가테이블, 'E' : 종목코드테이블
     stock_event = models.ForeignKey("StockEvent", on_delete=models.CASCADE, null=True)
+    
+    # 'DI' : Delete&Insert all row data , # 'UD': update additional row
+    update_type = models.CharField(max_length=2, default='UD')
     mod_dt = models.DateField(default=timezone.now)
     reg_dt = models.DateField()
 

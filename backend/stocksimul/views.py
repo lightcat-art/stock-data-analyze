@@ -1,5 +1,4 @@
 import datetime
-import json
 from datetime import timedelta
 from time import strptime, mktime
 
@@ -12,6 +11,7 @@ from pykrx.website.krx.market import wrap
 from .forms import StockSimulParamForm
 from .models import StockPrice, StockInfoUpdateStatus, StockEvent, StockSimulParam
 
+stock_price_init_start_dt = '2000-01-01'
 
 def stock_simul_param(request):
     event_list = StockEvent.objects.all
@@ -89,7 +89,7 @@ def ajax_chart_data(request):
         print('ajax_chart_data : stock = {}'.format(stock))
         time_tuple = strptime(str(stock.date), '%Y-%m-%d')
         utc_now = mktime(time_tuple) * 1000
-        ajax_gui_whole.append([utc_now, stock.open, 9999, 8888, stock.close, 777777])
+        ajax_gui_whole.append([utc_now, stock.open, stock.high, stock.low, stock.close, stock.volume])
 
     response = {}
     response.update({'chart_data':ajax_gui_whole})
@@ -113,26 +113,38 @@ def update_stock_price(event_info):
         print('update_stock_price : last mod date = {}'.format(price_info_status_qryset.first().mod_dt))
         print('update_stock_price : date substract result = ',
               datetime.date.today() - price_info_status_qryset.first().mod_dt)
-    if price_info_status_qryset.count() == 0 or (datetime.date.today() - price_info_status_qryset[0].mod_dt) \
-            >= timedelta(days=PRICE_INFO_UPDATE_PERIOD):
-        info_none_yn = price_info_status_qryset.count() == 0
+    info_none_yn = price_info_status_qryset.count() == 0
+    info_update_yn = (datetime.date.today() - price_info_status_qryset[0].mod_dt) \
+                     >= timedelta(days=PRICE_INFO_UPDATE_PERIOD) and price_info_status_qryset.first().update_type == 'UD'
+    info_del_ins_yn = price_info_status_qryset.first().update_type == 'DI'
+    if info_none_yn or info_update_yn or info_del_ins_yn:
         if info_none_yn:
-            update_start_dt = '2000-01-01'
+            update_start_dt = stock_price_init_start_dt
             status_dict = {'table_type': 'P', 'mod_dt': datetime.date.today(), 'reg_dt': datetime.date.today(),
                            'stock_event_id': event_info.stock_event_id}
             price_info_status_model = StockInfoUpdateStatus(**status_dict)
             price_info_status_model.save()
-        else:
+        elif info_update_yn:
             update_start_dt = (price_info_status_qryset[0].mod_dt + timedelta(days=1)).strftime('%Y%m%d')
             price_info_status_model = price_info_status_qryset.first()
             price_info_status_model.mod_dt = datetime.date.today()
             price_info_status_model.save()
+        elif info_del_ins_yn:
+            update_start_dt = stock_price_init_start_dt
+            prev_stock_price_qryset = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id)
+            prev_stock_price_qryset.delete()
+            price_info_status_model = price_info_status_qryset.first()
+            price_info_status_model.mod_dt = datetime.date.today()
+            price_info_status_model.update_type = 'UD'
+            price_info_status_model.save()
         print('2 price_info_status = ', price_info_status_qryset)
 
-        price_info_df = stock.get_market_ohlcv_by_date(update_start_dt, today, event_info.event_code)
+        # price_info_df = stock.get_market_ohlcv_by_date(update_start_dt, today, event_info.event_code)
+        price_info_df = wrap.get_market_ohlcv_by_date(update_start_dt, today, event_info.event_code)
         price_info_df = price_info_df.reset_index()
         price_info_df.rename(
-            columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high', '저가': 'low'},
+            columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high', '저가': 'low',
+                     '거래대금':'value', '등락률':'up_down_rate'},
             inplace=True)
         with transaction.atomic():
             for item in price_info_df.to_dict('records'):
