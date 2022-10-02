@@ -12,88 +12,6 @@
         </div>
     </div>
 </div>
-<!--<div id="container 1">-->
-<!--    <script>-->
-<!--        Highcharts.setOptions({-->
-<!--            global: {-->
-<!--                useUTC: false-->
-<!--            }-->
-<!--        });-->
-<!--        Highcharts.stockChart("container", {-->
-<!--            chart: {-->
-<!--                height: 500-->
-<!--            },-->
-<!--            title: {-->
-<!--                text: '{{ chart_data|get_value:"name" }}',-->
-<!--            },-->
-<!--            rangeSelector: {-->
-<!--                selected: 5,-->
-<!--                inputEnabled: false-->
-<!--            },-->
-
-<!--            xAxis: {-->
-<!--                type: 'date',-->
-<!--                labels: {-->
-<!--                    formatter: function(){-->
-<!--                        return Highcharts.dateFormat('%y.%m.%d', this.value);-->
-<!--                    },-->
-<!--                    step: 3-->
-<!--                }-->
-<!--            },-->
-<!--            yAxis: {-->
-<!--                labels: {-->
-<!--                    format: '{value}',-->
-<!--                    style: {-->
-<!--                        color: 'rgba(0,0,0, .6)',-->
-<!--                    },-->
-<!--                    x: 30,-->
-<!--                },-->
-<!--                opposite: false,-->
-<!--                tickInterval: 50,-->
-<!--            },-->
-<!--            tooltip: {-->
-<!--                xDateFormat: '%Y-%m-%d',-->
-<!--                split: true-->
-<!--            },-->
-<!--            series: [{-->
-<!--                name: '시가',-->
-<!--                data: {{ chart_data|get_value:"open" }},-->
-<!--                color: 'rgba(0,200,0,.6)',-->
-<!--                lineWidth: 2-->
-<!--            },-->
-<!--            {-->
-<!--                name: '종가',-->
-<!--                data: {{ chart_data|get_value:"close" }},-->
-<!--                lineWidth: 3-->
-<!--            }],-->
-<!--            legend: {-->
-<!--                enabled: true,-->
-<!--                align: 'left',-->
-<!--                verticalAlign: 'top',-->
-<!--                floating: true,-->
-<!--                x: 30,-->
-<!--                y: 70-->
-<!--            },-->
-<!--            responsive: {-->
-<!--                rules: [{-->
-<!--                    condition: {-->
-<!--                        maxWidth: 600-->
-<!--                    },-->
-<!--                    chartOptions: {-->
-<!--                        chart: {-->
-<!--                            height: 300-->
-<!--                        },-->
-<!--                        navigator: {-->
-<!--                            enabled: true-->
-<!--                        }-->
-<!--                    }-->
-<!--                }]-->
-<!--            }-->
-<!--        });-->
-
-
-<!--    </script>-->
-<!--</div>-->
 
 <!-- 직접 template data를 사용하여 출력 -->
 <div id="container-1" class="chart">
@@ -198,17 +116,18 @@
 </div>
 
 
-<!-- 직접 template data를 사용하여 출력 -->
+<!-- ajax 내부 url 통신을 사용하여 출력 -->
 <div id="container-2" class="chart">
     <script>
     console.log('container-2 event_name = ', '{{event_name}}' )
-    let param = {
-        'event_name' : '{{ event_name }}'
-    }
+    console.log('container-2 event_name = ', '{{start_date_str}}' )
+    console.log('container-2 event_name = ', '{{end_date_str}}' )
+
     $.ajax({
         url : '{% url 'ajax_chart_data' %}',
-        dataType: 'json',
-<!--        data : JSON.stringify(param),-->
+        type: 'GET',
+        data: {'event_name': '{{ event_name }}'
+        , 'start_date_str':'{{ start_date_str }}','end_date_str':'{{ end_date_str }}'},
         success: function(data){
 
         console.log('ajax response data = ', data)

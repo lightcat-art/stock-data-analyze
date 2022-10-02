@@ -28,7 +28,7 @@ def stock_simul_param(request):
             return redirect('stock_simul_result', pk=simul_param.pk)
     else:
         form = StockSimulParamForm()
-    return render(request, 'stocksimul/stock_simul_param.html', {'form': form, 'show_event':event_list})
+    return render(request, 'stocksimul/stock_simul_param.html', {'form': form, 'show_event': event_list})
 
 
 def stock_simul_result(request, pk):
@@ -38,12 +38,12 @@ def stock_simul_result(request, pk):
     print('input param : event_name = {}'.format(simul_param.event_name))
 
     event_name = simul_param.event_name
-    start_date = simul_param.start_date.strftime('%Y%m%d')
-    end_date = (simul_param.start_date + timedelta(days=simul_param.days)).strftime('%Y%m%d')
+    start_date_str = simul_param.start_date.strftime('%Y%m%d')
+    end_date_str = (simul_param.start_date + timedelta(days=simul_param.days)).strftime('%Y%m%d')
     # print(start_date)
     # print(end_date)
 
-    update_event_info(start_date)
+    update_event_info(start_date_str)
 
     event_info = get_object_or_404(StockEvent, event_name=event_name)
     # print('event_name={}, event_info={}'.format(event_name, event_info))
@@ -51,16 +51,49 @@ def stock_simul_result(request, pk):
 
     update_stock_price(event_info)
 
-    simul_start_date = datetime.datetime.strptime(start_date, '%Y%m%d')
-    simul_end_date = datetime.datetime.strptime(end_date, '%Y%m%d')
+    simul_start_date = datetime.datetime.strptime(start_date_str, '%Y%m%d')
+    simul_end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d')
     stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
         .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
 
     chart_data, gui_ohlc, gui_volume, gui_whole = make_chart_data(stocks, event_name)
 
-    return render(request, 'stocksimul/stock_simul_result.html', {'chart_data': chart_data, 'gui_ohlc':gui_ohlc,
-                                                                  'gui_volume':gui_volume, 'gui_whole':gui_whole,
-                                                                  'event_name':event_name})
+    return render(request, 'stocksimul/stock_simul_result.html', {'gui_ohlc': gui_ohlc,
+                                                                  'gui_volume': gui_volume, 'gui_whole': gui_whole,
+                                                                  'event_name': event_name,
+                                                                  'start_date_str':start_date_str,
+                                                                  'end_date_str':end_date_str})
+
+
+def ajax_chart_data(request):
+
+    print('ajax_chart_data start')
+    # print('ajax_chart_data : event_name = {}'.format(event_name))
+    # print('ajax_chart_data : request body :', request.body)
+    # print('ajax_chart_data : request POST info :', request.POST)
+    print('ajax_chart_data : request GET info :', request.GET)
+    # json_object = json.loads(request.GET)
+    event_name = request.GET.get('event_name')
+    start_date_str = request.GET.get('start_date_str')
+    end_date_str = request.GET.get('end_date_str')
+    event_info = get_object_or_404(StockEvent, event_name=event_name)
+    simul_start_date = datetime.datetime.strptime(start_date_str, '%Y%m%d')
+    simul_end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d')
+    stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
+        .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
+
+    # data = {'whole': [[123124124, 2324, 2323, 2323, 2323, 2323]]}
+    ajax_gui_whole = []
+    print('ajax_chart_data : stocks = {}'.format(stocks))
+    for stock in stocks:
+        print('ajax_chart_data : stock = {}'.format(stock))
+        time_tuple = strptime(str(stock.date), '%Y-%m-%d')
+        utc_now = mktime(time_tuple) * 1000
+        ajax_gui_whole.append([utc_now, stock.open, 9999, 8888, stock.close, 777777])
+
+    response = {}
+    response.update({'chart_data':ajax_gui_whole})
+    return JsonResponse(response)
 
 
 def update_stock_price(event_info):
@@ -113,10 +146,10 @@ def update_stock_price(event_info):
               .format(price_info_status_qryset.first().mod_dt))
 
 
-def update_event_info(start_date):
+def update_event_info(start_date_str):
     '''
     전체 주식종목정보 업데이트
-    :param start_date: 시뮬레이션 시작날짜 입력값
+    :param start_date_str: 시뮬레이션 시작날짜 입력값
     :return:
     '''
     # 종목정보 업데이트 날짜주기
@@ -131,7 +164,7 @@ def update_event_info(start_date):
               datetime.date.today() - event_info_status_qryset.first().mod_dt)
     if event_info_status_qryset.count() == 0 or (datetime.date.today() - event_info_status_qryset.first().mod_dt) \
             >= timedelta(days=EVENT_INFO_UPDATE_PERIOD):
-        whole_code_df = wrap.get_market_ticker_and_name(date=start_date, market='ALL')
+        whole_code_df = wrap.get_market_ticker_and_name(date=start_date_str, market='ALL')
         whole_code_df = [{'event_code': k, 'event_name': v} for k, v in whole_code_df.iteritems()]
         # 종목코드가 변경되는 경우, 상장폐지 되는 경우, 신규상장되는 경우를 고려하여 업데이트 쿼리 작성 필요.
         # with transaction.atomic():
@@ -157,13 +190,6 @@ def update_event_info(start_date):
 #     chart_data = make_chart_data(stocks, event_name)
 #     return chart_data
 
-def ajax_chart_data(request):
-    print('ajax_chart_data start')
-    # print('ajax_chart_data : event_name = {}'.format(event_name))
-    print('ajax_chart_data : request body :', request.body)
-
-    data = {'whole': [[123124124, 2324, 2323, 2323, 2323, 2323]]}
-    return JsonResponse(data)
 
 def make_chart_data(stocks, event_name):
     '''
