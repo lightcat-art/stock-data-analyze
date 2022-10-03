@@ -14,7 +14,7 @@
 </div>
 
 <!-- ajax 내부 url 통신을 사용하여 출력 -->
-<div id="container-2" class="chart">
+<div id="container-2" class="chart" style="height:730px">
     <script>
     console.log('container-2 event_name = ', '{{event_name}}' )
     console.log('container-2 event_name = ', '{{start_date_str}}' )
@@ -119,10 +119,13 @@
                 chartOptions: {
                     rangeSelector: {
                         inputEnabled: false
-                    }
+                    },
                 }
             }]
-        }
+        },
+<!--        chart:{-->
+<!--            height: 700,-->
+<!--        }-->
         });
         }
     });
