@@ -1,17 +1,19 @@
 {% extends 'stocksimul/base.html' %}
 {% block content %}
-<div class="content container">
+<div class="content text-center container center_div">
+    <div class="py-5">
+      <h1>주식 차트 조회 서비스</h1>
+      <p class="lead">국내 주식 차트 조회 사이트입니다.This is a Test Copy Sample Test. Stock Chart Searching Service Launcing for domestic user</p>
+    </div>
     <div class="row">
-        <div class="col-md-8">
-            <br/>
-            <br/>
-            <h1>정보 입력</h1>
+        <div class="col">
+<!--            <h2>정보 입력</h2>-->
             <p></p>
 <!--             Form을 제출할때 같은 뷰를 다시 불러옴. 이때 request에는 우리가 입력했던 데이터를 request.POST에 가지고 있음.-->
             <form action="" method="POST" class="form-signin">{% csrf_token %}
 <!--                 입력받은 modelForm 내 field를 불러와 loop 수행-->
                 {% for field in form %}
-                <div class="fieldWrapper">
+                <div class="field_wrapper">
                     {% if field.help_text %}
                         <p class="help">{{ field.help_text|safe }}</p>
                     {% endif %}
@@ -21,8 +23,8 @@
 <!--                        {{ field.label_tag}} -->
                         <!-- name attribute는 form 내 searchable dropdown 목적의 필드명과 같아야 함. -->
                         <!-- input tag의 list attribute는 datalist tag의 id 와 같아야 함 -->
-                        <input type="text" list="eventlist" class="form-control"
-                               name="event_name" placeholder="종목 검색" style="width:150px;">
+                        <input type="text" list="eventlist" class="form-control chart_param"
+                               name="event_name" placeholder="종목 검색">
                         <datalist id="eventlist">
                             <!-- searchable dropdown 만들 데이터 생성 -->
                             {% for event in show_event %}
@@ -38,13 +40,10 @@
                 </div>
                 <br/>
                 {% endfor %}
-<!--                <p>{{ form.event_name }}</p>-->
-<!--                <p>{{ form.start_date }}</p>-->
-<!--                <p>{{ form.days }}</p>-->
 <!--                <button type="submit" class="submit btn btn-default">Submit</button>-->
 <!--                <input type="submit" value="조회">-->
                 <button class="btn btn-lg btn-primary btn-block" type="submit"
-                 style="width:150px">Check</button>
+                 style="width:150px">Search</button>
             </form>
         </div>
     </div>

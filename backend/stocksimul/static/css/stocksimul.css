@@ -1,44 +1,19 @@
-.page-header {
-    background-color: #efefef;
-    margin-top: 0;
-    padding: 20px 20px 20px 40px;
+.center_div{
+    margin: 30 auto;
+    width:50% /* value of your choice which suits your alignment */
 }
 
-.page-header h1, .page-header h1 a{
-    color: #ffffff;
-    font-size: 36pt;
-    text-decoration: none;
+.field_wrapper{
+    margin: 0 auto;
+    width:30%
 }
 
-.page-header h1 a:visited, .page-header h1 a:hover {
-    color: #feeeee;
-    font-size: 36pt;
+.chart_param{
+    width:370px;
+    text-align: left;
 }
 
-.content {
-    margin-left: 40px;
-}
-
-h1, h2, h3, h4{
-    font-family: 'Lobster', 'Noto Sans KR', sans-serif;
-}
-
-p{
-    font-family: 'Noto Sans KR', sans-serif;
-}
-
-.date {
-    color: #828282;
-}
-
-.post {
-    margin-bottom: 70px;
-}
-
-.post h1 a, .post h1 a:visited {
-    color: #000000;
-}
-
-body {
-    padding-left: 15px;
+.chart_param_date{
+    width:370px;
+    text-align: center;
 }

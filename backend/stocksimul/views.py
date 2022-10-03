@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from pykrx import stock
 from pykrx.website.krx.market import wrap
+import plotly.graph_objects as go
 
 from .forms import StockSimulParamForm
 from .models import StockPrice, StockInfoUpdateStatus, StockEvent, StockSimulParam
@@ -51,12 +52,12 @@ def stock_simul_result(request, pk):
 
     update_stock_price(event_info)
 
-    # simul_start_date = datetime.datetime.strptime(start_date_str, '%Y%m%d')
-    # simul_end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d')
-    # stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
-    #     .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
+    simul_start_date = datetime.datetime.strptime(start_date_str, '%Y%m%d')
+    simul_end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d')
+    stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
+        .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
 
-    # chart_data, gui_ohlc, gui_volume, gui_whole = make_chart_data(stocks, event_name)
+    make_chart_data(stocks, event_name)
 
     return render(request, 'stocksimul/stock_simul_result.html', {'event_name': event_name,
                                                                   'start_date_str':start_date_str,
@@ -106,42 +107,46 @@ def update_stock_price(event_info):
         .filter(stock_event_id=event_info.stock_event_id)
     # price_info_status = StockInfoUpdateStatus.objects.get(
     #     Q(table_type='P') & Q(stock_event_id=event_info.stock_event_id))
-    if price_info_status_qryset.count() != 0:
-        print('update_stock_price : last mod date = {}'.format(price_info_status_qryset.first().mod_dt))
-        print('update_stock_price : date substract result = ',
-              datetime.date.today() - price_info_status_qryset.first().mod_dt)
-    info_none_yn = price_info_status_qryset.count() == 0
-    info_update_yn = (datetime.date.today() - price_info_status_qryset[0].mod_dt) \
-                     >= timedelta(days=PRICE_INFO_UPDATE_PERIOD) and price_info_status_qryset.first().update_type == 'UD'
-    info_del_ins_yn = price_info_status_qryset.first().update_type == 'DI'
-    if info_none_yn or info_update_yn or info_del_ins_yn:
-        if info_none_yn:
-            update_start_dt = stock_price_init_start_dt
-            status_dict = {'table_type': 'P', 'mod_dt': datetime.date.today(), 'reg_dt': datetime.date.today(),
-                           'stock_event_id': event_info.stock_event_id}
-            price_info_status_model = StockInfoUpdateStatus(**status_dict)
-            price_info_status_model.save()
-        elif info_update_yn:
-            update_start_dt = (price_info_status_qryset[0].mod_dt + timedelta(days=1)).strftime('%Y%m%d')
-            price_info_status_model = price_info_status_qryset.first()
-            price_info_status_model.mod_dt = datetime.date.today()
-            price_info_status_model.save()
-        elif info_del_ins_yn:
-            update_start_dt = stock_price_init_start_dt
-            prev_stock_price_qryset = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id)
-            prev_stock_price_qryset.delete()
-            price_info_status_model = price_info_status_qryset.first()
-            price_info_status_model.mod_dt = datetime.date.today()
-            price_info_status_model.update_type = 'UD'
-            price_info_status_model.save()
-        print('2 price_info_status = ', price_info_status_qryset)
+    info_none_yn = False
+    info_update_yn = False
+    info_del_ins_yn = False
+    print('update_stock_price : info_status = ', price_info_status_qryset)
+    if price_info_status_qryset.count() == 0:  # 이전에 해당 종목데이터가 업데이트된 이력이 없는 경우
+        print('update_stock_price : first update for {}'.format(event_info.event_name))
+        update_start_dt = stock_price_init_start_dt
+        status_dict = {'table_type': 'P', 'mod_dt': datetime.date.today(), 'reg_dt': datetime.date.today(),
+                       'stock_event_id': event_info.stock_event_id}
+        price_info_status_model = StockInfoUpdateStatus(**status_dict)
+        price_info_status_model.save()
+        info_none_yn = True
+    # 이전에 업데이트 된 이력이 있고, 업데이트 주기가 도달하거나 초과한 경우
+    elif (datetime.date.today() - price_info_status_qryset[0].mod_dt) \
+            >= timedelta(days=PRICE_INFO_UPDATE_PERIOD) and price_info_status_qryset.first().update_type == 'UD':
+        print('update_stock_price : add recent data for {}'.format(event_info.event_name))
+        update_start_dt = (price_info_status_qryset[0].mod_dt + timedelta(days=1)).strftime('%Y%m%d')
+        price_info_status_model = price_info_status_qryset.first()
+        price_info_status_model.mod_dt = datetime.date.today()
+        price_info_status_model.save()
+        info_update_yn = True
+    # 해당 종목에 대해서 데이터 DELETE를 하고 다시 INSERT 해야하느 경우
+    elif price_info_status_qryset.first().update_type == 'DI':
+        print('update_stock_price : delete&insert for {}'.format(event_info.event_name))
+        update_start_dt = stock_price_init_start_dt
+        prev_stock_price_qryset = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id)
+        prev_stock_price_qryset.delete()
+        price_info_status_model = price_info_status_qryset.first()
+        price_info_status_model.mod_dt = datetime.date.today()
+        price_info_status_model.update_type = 'UD'
+        price_info_status_model.save()
+        info_del_ins_yn = True
 
+    if info_none_yn or info_update_yn or info_del_ins_yn:
         # price_info_df = stock.get_market_ohlcv_by_date(update_start_dt, today, event_info.event_code)
         price_info_df = wrap.get_market_ohlcv_by_date(update_start_dt, today, event_info.event_code)
         price_info_df = price_info_df.reset_index()
         price_info_df.rename(
             columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high', '저가': 'low',
-                     '거래대금':'value', '등락률':'up_down_rate'},
+                     '거래대금': 'value', '등락률': 'up_down_rate'},
             inplace=True)
         with transaction.atomic():
             for item in price_info_df.to_dict('records'):
@@ -151,7 +156,7 @@ def update_stock_price(event_info):
                 entry.stock_event_id = event_info.stock_event_id
                 entry.save()
     else:
-        print("price_info_status doesn't have to update. last modify date is {}"
+        print("update_stock_price : doesn't have to update. last modify date is {}"
               .format(price_info_status_qryset.first().mod_dt))
 
 
@@ -210,38 +215,36 @@ def make_chart_data(stocks, event_name):
     chart_data = {}
     close_list = []
     open_list = []
+    high_list = []
+    low_list = []
+    date_list = []
+    volume_list = []
 
     gui_ohlc = []
     gui_volume = []
     gui_whole = []
     print('make chart data : stocks = {}'.format(stocks))
     for stock in stocks:
-        time_tuple = strptime(str(stock.date), '%Y-%m-%d')
-        utc_now = mktime(time_tuple) * 1000
-        close_list.append([utc_now, stock.close])
-        open_list.append([utc_now, stock.open])
+        # time_tuple = strptime(str(stock.date), '%Y-%m-%d')
+        # utc_now = mktime(time_tuple) * 1000
+        # gui_whole.append([utc_now, stock.open, stock.high, stock.low, stock.close, stock.volume])
+        open_list.append(stock.open)
+        close_list.append(stock.close)
+        high_list.append(stock.high)
+        low_list.append(stock.low)
+        date_list.append(stock.date)
+        volume_list.append(stock.volume)
 
-        gui_ohlc.append([utc_now, stock.open, stock.close, 9999, 8888])  # the date, open, high, low, close
-        gui_volume.append([utc_now, 7777])
+    fig = go.FIgure(data=[go.Ohlc(x=date_list,
+                          open=open_list, high=high_list,
+                          low=low_list, close=close_list)])
+    fig.show()
 
-        gui_whole.append([utc_now, stock.open, 9999, 8888, stock.close, 777777])
 
-    # chart_data = {
-    #     'chart': {'height': 500},
-    #     'title': {'text': event_name},
-    #     'setOptions': {'global': {'useUTC': 'false'}},
-    #     'xAxis': {
-    #         'type': 'date',
-    #         'lables': {
-    #         }
-    #     }
-    # }
 
-    chart_data = {
-        'close': close_list,
-        'open': open_list,
-        'name': event_name
-    }
-    # chart_data = json.dumps(chart_data)
 
-    return chart_data, gui_ohlc, gui_volume, gui_whole
+
+
+
+
+
