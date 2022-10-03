@@ -268,8 +268,9 @@ def make_chart_data(stocks, event_name):
                 dict(count=1, label='YTD', step='year', stepmode='todate'),
                 dict(count=1, label='1Y', step='year', stepmode='backward'),
                 dict(step='all')])))
-    # fig.update_yaxes(title_text='{} Price'.format(event_name), tickprefix='')
 
-    graph = fig.to_html(full_html=False, default_height=800, default_width=1500)
+    # fig.update_yaxes(autorange=True, fixedrange=False)
+
+    graph = fig.to_html(full_html=False, default_height='150%')
 
     return graph

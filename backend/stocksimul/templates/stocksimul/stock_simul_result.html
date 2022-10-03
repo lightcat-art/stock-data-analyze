@@ -5,12 +5,12 @@
 {% block content %}
 <div class="content text-center container center_div">
     <div class="py-5">
-      <h1>주식 차트 조회 결과</h1>
-      <p class="lead">...</p>
+      <h1>'{{ event_name }}' 에 대한 결과</h1>
+      <p class="lead"></p>
     </div>
 </div>
 
-<div id="container" class="chart" style="height:730px">
+<div id="container" class="chart">
     <div id="graph">
         {% if graph %}
             {{ graph|safe }}
