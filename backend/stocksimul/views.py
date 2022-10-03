@@ -5,6 +5,7 @@ from time import strptime, mktime
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
+from plotly.subplots import make_subplots
 from pykrx import stock
 from pykrx.website.krx.market import wrap
 import plotly.graph_objects as go
@@ -57,11 +58,13 @@ def stock_simul_result(request, pk):
     stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
         .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
 
-    make_chart_data(stocks, event_name)
+    graph = make_chart_data(stocks, event_name)
+    # print(graph)
 
     return render(request, 'stocksimul/stock_simul_result.html', {'event_name': event_name,
                                                                   'start_date_str':start_date_str,
-                                                                  'end_date_str':end_date_str})
+                                                                  'end_date_str':end_date_str,
+                                                                  'graph':graph})
 
 
 def ajax_chart_data(request):
@@ -235,10 +238,34 @@ def make_chart_data(stocks, event_name):
         date_list.append(stock.date)
         volume_list.append(stock.volume)
 
-    fig = go.FIgure(data=[go.Ohlc(x=date_list,
+
+    # template = dict(
+    #     layout=go.Layout(title_font=dict(family="plotly_dark", size=24))
+    # )
+
+    # Create figure with secondary y-axis
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.3, subplot_titles=('OHLC','Volume'),
+                        row_width=[0.2, 0.7])
+
+    # include candlestick with rangeselector
+    fig.add_trace(go.Candlestick(x=date_list,
                           open=open_list, high=high_list,
-                          low=low_list, close=close_list)])
-    fig.show()
+                          low=low_list, close=close_list), row=1, col=1)
+
+    # include a go.Bar trace for volumes
+    fig.add_trace(go.Bar(x=date_list, y=volume_list), row=2, col=1)
+    fig.update_layout(title=event_name,
+                      template="none")
+
+    # fig = go.Figure(data=[go.Candlestick(x=date_list,
+    #                       open=open_list, high=high_list,
+    #                       low=low_list, close=close_list)])
+    # fig.show()
+    graph = fig.to_html(full_html=False, default_height=800, default_width=1500)
+    # graph = fig.to_json()
+    # print(graph_html)
+    # print(graph_)
+    return graph
 
 
 
