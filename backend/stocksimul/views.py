@@ -6,7 +6,6 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from plotly.subplots import make_subplots
-from pykrx import stock
 from pykrx.website.krx.market import wrap
 import plotly.graph_objects as go
 
@@ -14,6 +13,7 @@ from .forms import StockSimulParamForm
 from .models import StockPrice, StockInfoUpdateStatus, StockEvent, StockSimulParam
 
 stock_price_init_start_dt = '2000-01-01'
+
 
 def stock_simul_param(request):
     event_list = StockEvent.objects.all
@@ -62,13 +62,12 @@ def stock_simul_result(request, pk):
     # print(graph)
 
     return render(request, 'stocksimul/stock_simul_result.html', {'event_name': event_name,
-                                                                  'start_date_str':start_date_str,
-                                                                  'end_date_str':end_date_str,
-                                                                  'graph':graph})
+                                                                  'start_date_str': start_date_str,
+                                                                  'end_date_str': end_date_str,
+                                                                  'graph': graph})
 
 
 def ajax_chart_data(request):
-
     print('ajax_chart_data start')
     # print('ajax_chart_data : event_name = {}'.format(event_name))
     # print('ajax_chart_data : request body :', request.body)
@@ -93,7 +92,7 @@ def ajax_chart_data(request):
         ajax_gui_whole.append([utc_now, stock.open, stock.high, stock.low, stock.close, stock.volume])
 
     response = {}
-    response.update({'chart_data':ajax_gui_whole})
+    response.update({'chart_data': ajax_gui_whole})
     return JsonResponse(response)
 
 
@@ -238,40 +237,39 @@ def make_chart_data(stocks, event_name):
         date_list.append(stock.date)
         volume_list.append(stock.volume)
 
-
     # template = dict(
     #     layout=go.Layout(title_font=dict(family="plotly_dark", size=24))
     # )
 
     # Create figure with secondary y-axis
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.3, subplot_titles=('OHLC','Volume'),
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.3, subplot_titles=('OHLC', 'Volume'),
                         row_width=[0.2, 0.7])
 
     # include candlestick with rangeselector
     fig.add_trace(go.Candlestick(x=date_list,
-                          open=open_list, high=high_list,
-                          low=low_list, close=close_list), row=1, col=1)
+                                 open=open_list, high=high_list,
+                                 low=low_list, close=close_list, increasing_line_color='skyblue',
+                                 decreasing_line_color='gray', increasing_fillcolor='skyblue',
+                                 decreasing_fillcolor='gray'), row=1, col=1)
 
     # include a go.Bar trace for volumes
-    fig.add_trace(go.Bar(x=date_list, y=volume_list), row=2, col=1)
+    fig.add_trace(go.Bar(x=date_list, y=volume_list, marker_color='steelblue'), row=2, col=1)
     fig.update_layout(title=event_name,
-                      template="none")
+                      template="plotly_white")
 
-    # fig = go.Figure(data=[go.Candlestick(x=date_list,
-    #                       open=open_list, high=high_list,
-    #                       low=low_list, close=close_list)])
-    # fig.show()
+    fig.update_xaxes(
+        title_text='Date',
+        rangeslider_visible=False,
+        rangeselector=dict(
+            buttons=list([
+                dict(count=1, label='1M', step='month', stepmode='backward'),
+                dict(count=3, label='3M', step='month', stepmode='backward'),
+                dict(count=6, label='6M', step='month', stepmode='backward'),
+                dict(count=1, label='YTD', step='year', stepmode='todate'),
+                dict(count=1, label='1Y', step='year', stepmode='backward'),
+                dict(step='all')])))
+    # fig.update_yaxes(title_text='{} Price'.format(event_name), tickprefix='')
+
     graph = fig.to_html(full_html=False, default_height=800, default_width=1500)
-    # graph = fig.to_json()
-    # print(graph_html)
-    # print(graph_)
+
     return graph
-
-
-
-
-
-
-
-
-
