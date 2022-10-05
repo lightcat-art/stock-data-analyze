@@ -40,6 +40,7 @@
 
             var data = [trace_input];
             var layout = {
+                hovermode: 'x unified',
                 dragmode: 'zoom',
                 margin: {
                     r: 10,
@@ -101,9 +102,11 @@
                         for (var xi = 0; xi < trace.x.length; xi++) {
                             x = trace.x[xi];
                             if (!vi_min) {
-                                if (x >= xr_min) vi_min = Math.max(0, xi - 1);  // Need 1 before the range
+                                if (x >= xr_min) {
+                                    vi_min = Math.max(0, xi);  // Need 1 before the range
+                                }
                             } else {
-                                if (x <= xr_max) vi_max = Math.min(xi + 1, trace.x.length); // Need 1 after
+                                if (x <= xr_max) vi_max = Math.min(xi, trace.x.length); // Need 1 after
                                 else if (!vi_max) {
                                     vi_max = Math.min(xi, trace.x.length);
                                     break
@@ -111,8 +114,6 @@
                                 else break
                             }
                         }
-                        console.log('vi_min=',vi_min)
-                        console.log('vi_max=',vi_max)
                         // Get min-max y values between indexes
                         for (var t = 0; t < graphDiv.data.length; t++) {
                             var y_min = Number.MAX_VALUE,
