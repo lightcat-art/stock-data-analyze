@@ -53,26 +53,54 @@ def stock_simul_result(request, pk):
 
     update_stock_price(event_info)
 
-    simul_start_date = datetime.datetime.strptime(start_date_str, '%Y%m%d')
-    simul_end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d')
-    stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
-        .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
-
-    graph = make_chart_data(stocks, event_name)
+    # simul_start_date = datetime.datetime.strptime(start_date_str, '%Y%m%d')
+    # simul_end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d')
+    # stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
+    #     .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
+    #
+    # graph = make_chart_data(stocks, event_name)
     # print(graph)
 
     return render(request, 'stocksimul/stock_simul_result.html', {'event_name': event_name,
                                                                   'start_date_str': start_date_str,
-                                                                  'end_date_str': end_date_str,
-                                                                  'graph': graph})
+                                                                  'end_date_str': end_date_str})
 
 
-def ajax_chart_data(request):
-    print('ajax_chart_data start')
+# def ajax_chart_data(request):
+#     print('ajax_chart_data start')
+#     # print('ajax_chart_data : event_name = {}'.format(event_name))
+#     # print('ajax_chart_data : request body :', request.body)
+#     # print('ajax_chart_data : request POST info :', request.POST)
+#     print('ajax_chart_data : request GET info :', request.GET)
+#     # json_object = json.loads(request.GET)
+#     event_name = request.GET.get('event_name')
+#     start_date_str = request.GET.get('start_date_str')
+#     end_date_str = request.GET.get('end_date_str')
+#     event_info = get_object_or_404(StockEvent, event_name=event_name)
+#     simul_start_date = datetime.datetime.strptime(start_date_str, '%Y%m%d')
+#     simul_end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d')
+#     stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
+#         .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
+#
+#     # data = {'whole': [[123124124, 2324, 2323, 2323, 2323, 2323]]}
+#     ajax_gui_whole = []
+#     print('ajax_chart_data : stocks = {}'.format(stocks))
+#     for stock in stocks:
+#         time_tuple = strptime(str(stock.date), '%Y-%m-%d')
+#         utc_now = mktime(time_tuple) * 1000
+#         ajax_gui_whole.append([utc_now, stock.open, stock.high, stock.low, stock.close, stock.volume])
+#
+#     response = {}
+#     response.update({'chart_data': ajax_gui_whole})
+#     return JsonResponse(response)
+
+
+def ajax_plotly_chart_data(request):
+    print('ajax_plotly_chart_data')
     # print('ajax_chart_data : event_name = {}'.format(event_name))
     # print('ajax_chart_data : request body :', request.body)
     # print('ajax_chart_data : request POST info :', request.POST)
-    print('ajax_chart_data : request GET info :', request.GET)
+    print('ajax_plotly_chart_data : request GET info :', request.GET)
     # json_object = json.loads(request.GET)
     event_name = request.GET.get('event_name')
     start_date_str = request.GET.get('start_date_str')
@@ -84,15 +112,24 @@ def ajax_chart_data(request):
         .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
 
     # data = {'whole': [[123124124, 2324, 2323, 2323, 2323, 2323]]}
-    ajax_gui_whole = []
-    print('ajax_chart_data : stocks = {}'.format(stocks))
+    # print('ajax_plotly_chart_data : stocks = {}'.format(stocks))
+    open = []
+    close = []
+    high = []
+    low = []
+    date = []
+    volume = []
     for stock in stocks:
-        time_tuple = strptime(str(stock.date), '%Y-%m-%d')
-        utc_now = mktime(time_tuple) * 1000
-        ajax_gui_whole.append([utc_now, stock.open, stock.high, stock.low, stock.close, stock.volume])
+        time_tuple = stock.date.strftime('%Y-%m-%d')
+        date.append(time_tuple)
+        open.append(stock.open)
+        close.append(stock.close)
+        low.append(stock.low)
+        high.append(stock.high)
+        volume.append(stock.volume)
 
     response = {}
-    response.update({'chart_data': ajax_gui_whole})
+    response.update({'date': date,'open':open,'close':close, 'high':high, 'low':low, 'volume':volume})
     return JsonResponse(response)
 
 
@@ -259,7 +296,7 @@ def make_chart_data(stocks, event_name):
 
     fig.update_xaxes(
         title_text='Date',
-        rangeslider_visible=False,
+        rangeslider_visible=True,
         rangeselector=dict(
             buttons=list([
                 dict(count=1, label='1M', step='month', stepmode='backward'),
@@ -269,8 +306,65 @@ def make_chart_data(stocks, event_name):
                 dict(count=1, label='1Y', step='year', stepmode='backward'),
                 dict(step='all')])))
 
-    # fig.update_yaxes(autorange=True, fixedrange=False)
+    # fig.update_yaxes(autorange=True)
+    # fig.layout.yaxis.update(autorange=True, fixedrange=False)
+
+    # def zoom(layout, xrange):
+    #     in_view_high = high_list[fig.layout.xaxis.range[0]:fig.layout.xaxis.range[1]]
+    #     in_view_low = high_list[fig.layout.xaxis.range[0]:fig.layout.xaxis.range[1]]
+    #     fig.layout.yaxis.range = [min(in_view_low) - 10, max(in_view_high) + 10]
+    #
+    # fig.layout.on_change(zoom, 'xaxis.range')
 
     graph = fig.to_html(full_html=False, default_height='150%')
+
+
+    # Test
+    #
+    # trace = go.Scatter(x=date_list,
+    #                    y=high_list)
+    #
+    # data = [trace]
+    # layout = dict(
+    #     title='Time series with range slider and selectors',
+    #     xaxis=dict(
+    #         rangeselector=dict(
+    #             buttons=list([
+    #                 dict(count=1,
+    #                      label='1m',
+    #                      step='month',
+    #                      stepmode='backward'),
+    #                 dict(count=6,
+    #                      label='6m',
+    #                      step='month',
+    #                      stepmode='backward'),
+    #                 dict(count=1,
+    #                      label='YTD',
+    #                      step='year',
+    #                      stepmode='todate'),
+    #                 dict(count=1,
+    #                      label='1y',
+    #                      step='year',
+    #                      stepmode='backward'),
+    #                 dict(step='all')
+    #             ])
+    #         ),
+    #         rangeslider=dict(
+    #             visible=True
+    #         ),
+    #         type='date'
+    #     )
+    # )
+    #
+    # fig_test = go.FigureWidget(data=data, layout=layout)
+    #
+    # def zoom(layout, xrange):
+    #     in_view = high_list[fig.layout.xaxis.range[0]:fig.layout.xaxis.range[1]]
+    #     fig.layout.yaxis.range = [min(in_view) - 2, max(in_view) + 2]
+    #     print(in_view)
+    #
+    # fig_test.layout.on_change(zoom, 'xaxis.range')
+    #
+    # graph_test = fig_test.to_html(full_html=False, default_height='150%')
 
     return graph

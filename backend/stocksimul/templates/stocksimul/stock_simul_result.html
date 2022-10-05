@@ -10,134 +10,135 @@
     </div>
 </div>
 
-<div id="container" class="chart">
-    <div id="graph">
-        {% if graph %}
-            {{ graph|safe }}
-        {% else %}
-            <p>No graph was provided.</p>
-        {% endif %}
-    </div>
+<!-- ajax 내부 url 통신을 사용하여 출력 -->
+<div id="container-1" class="chart">
+    <script>
+    console.log('container-2 event_name = ', '{{event_name}}' )
+    console.log('container-2 event_name = ', '{{start_date_str}}' )
+    console.log('container-2 event_name = ', '{{end_date_str}}' )
+
+    $.ajax({
+        url : '{% url 'ajax_plotly_chart_data' %}',
+        type: 'GET',
+        data: {'event_name': '{{ event_name }}'
+        , 'start_date_str':'{{ start_date_str }}','end_date_str':'{{ end_date_str }}'},
+        success: function(data){
+
+            var trace_input = {
+                x: data.date,
+                close: data.close,
+                open: data.open,
+                high: data.high,
+                low: data.low,
+                decreasing: {line: {color: 'gray'}, fillcolor: 'gray'},
+                increasing: {line: {color: 'skyblue'}, fillcolor: 'skyblue'},
+                line: {color: 'rgba(31,119,180,1)'},
+                type: 'candlestick',
+                xaxis: 'x',
+                yaxis: 'y'
+            };
+
+            var data = [trace_input];
+            var layout = {
+                dragmode: 'zoom',
+                margin: {
+                    r: 10,
+                    t: 25,
+                    b: 40,
+                    l: 60
+                },
+                showlegend: false,
+                xaxis: {
+                    autorange: true,
+                    domain: [0, 1],
+                    title: 'Date',
+                    type: 'date'
+                },
+                yaxis: {
+                    autorange: true,
+                    domain: [0,1],
+                    type: 'linear'
+                }
+            };
+            var graphDiv = document.getElementById('container-1');
+            Plotly.newPlot(graphDiv, data, layout);
+
+<!--            document.getElementById('container-1').onclick = function(e){-->
+<!--                alert("click");-->
+<!--            }-->
+            /**
+            * AutoScale
+            */
+            var relayout_semaphore = false,
+                vi_min = null, vi_max = null;
+            graphDiv.on('plotly_relayout', function (event_data) {
+                // Prevent infinite loop of relayout
+                if (relayout_semaphore) return;
+                relayout_semaphore = true;
+
+<!--                console.log(event_data['xaxis.range[0]']); // this is not found when using rangeslider-->
+<!--                console.log(event_data['xaxis.range[1]']); // this is not found when using rangeslider-->
+
+                // We need to use this inner property, because e.g. after screen resize no xrange is in event properties
+                // If it not allowed in your project you can use event properties and disable responsive in plot settings!
+                var xrange = graphDiv._fullLayout.xaxis.range;
+
+                var xr_min = xrange[0],
+                    xr_max = xrange[1],
+                    layout_change = {};
+                console.log('xr_min=',xr_min);
+                console.log('xr_max=',xr_max);
+                if (graphDiv.data) {
+                    var trace = graphDiv.data[0];  // 1st trace
+                    console.log('trace = ',trace);
+                    vi_min = null;
+                    vi_max = null;
+                    if (trace.x) {
+                        // Convert range values to date if x value is date
+                        var x = trace.x[0];
+                        if (x instanceof Date) {
+                            xr_min = new Date(xr_min);
+                            xr_max = new Date(xr_max);
+                        }
+                        // Get visible indexes
+                        for (var xi = 0; xi < trace.x.length; xi++) {
+                            x = trace.x[xi];
+                            if (!vi_min) {
+                                if (x >= xr_min) vi_min = Math.max(0, xi - 1);  // Need 1 before the range
+                            } else {
+                                if (x <= xr_max) vi_max = Math.min(xi + 1, trace.x.length); // Need 1 after
+                                else break
+                            }
+                        }
+                        console.log('vi_min=',vi_min)
+                        console.log('vi_max=',vi_max)
+                        // Get min-max y values between indexes
+                        for (var t = 0; t < graphDiv.data.length; t++) {
+                            var y_min = Number.MAX_VALUE,
+                                y_max = -Number.MAX_VALUE;
+                            trace = graphDiv.data[t];
+                            for (var yi = vi_min; yi <= vi_max; yi++) {
+                                var y_h = trace.high[yi];
+                                var y_l = trace.low[yi];
+                                if (y_l < y_min) y_min = y_l;
+                                if (y_h > y_max) y_max = y_h;
+                            }
+                            layout_change['yaxis' + (t > 0 ? t + 1 : '') + '.range'] = [y_min, y_max];
+                        }
+                    }
+                }
+
+                if (layout_change) {
+                    Plotly.relayout(graphDiv, layout_change);
+                    setTimeout(function () {
+                        relayout_semaphore = false;
+                    }, 0);
+                }
+            });
+            /** AutoScale Finish */
+        }
+    });
+    </script>
 </div>
-
-
-<!--&lt;!&ndash; ajax 내부 url 통신을 사용하여 출력 &ndash;&gt;-->
-<!--<div id="container-2" class="chart" style="height:730px">-->
-<!--    <script>-->
-<!--    console.log('container-2 event_name = ', '{{event_name}}' )-->
-<!--    console.log('container-2 event_name = ', '{{start_date_str}}' )-->
-<!--    console.log('container-2 event_name = ', '{{end_date_str}}' )-->
-
-<!--    $.ajax({-->
-<!--        url : '{% url 'ajax_chart_data' %}',-->
-<!--        type: 'GET',-->
-<!--        data: {'event_name': '{{ event_name }}'-->
-<!--        , 'start_date_str':'{{ start_date_str }}','end_date_str':'{{ end_date_str }}'},-->
-<!--        success: function(data){-->
-
-<!--        console.log('ajax response data = ', data)-->
-<!--        console.log('ajax response data length = ', data.chart_data.length)-->
-<!--        console.log('ajax response chart data = ', data.chart_data)-->
-<!--        console.log('ajax response chart data 0 = ', data.chart_data[0])-->
-<!--        var ohlc = [],-->
-<!--            volume = [],-->
-<!--            dataLength = data.chart_data.length,-->
-<!--            i = 0;-->
-<!--        for (i; i < dataLength; i += 1) {-->
-<!--            ohlc.push([-->
-<!--                data.chart_data[i][0], // the date-->
-<!--                data.chart_data[i][1], // open-->
-<!--                data.chart_data[i][2], // high-->
-<!--                data.chart_data[i][3], // low-->
-<!--                data.chart_data[i][4] // close-->
-<!--            ]);-->
-
-<!--            volume.push([-->
-<!--                data.chart_data[i][0], // the date-->
-<!--                data.chart_data[i][5] // the volume-->
-<!--            ]);-->
-<!--        }-->
-
-<!--        Highcharts.stockChart('container-2', {-->
-<!--        yAxis: [{-->
-<!--            labels: {-->
-<!--                align: 'left'-->
-<!--            },-->
-<!--            height: '80%',-->
-<!--            resize: {-->
-<!--                enabled: true-->
-<!--            }-->
-<!--        }, {-->
-<!--            labels: {-->
-<!--                align: 'left'-->
-<!--            },-->
-<!--            top: '80%',-->
-<!--            height: '20%',-->
-<!--            offset: 0-->
-<!--        }],-->
-<!--        tooltip: {-->
-<!--            shape: 'square',-->
-<!--            headerShape: 'callout',-->
-<!--            borderWidth: 0,-->
-<!--            shadow: false,-->
-<!--            positioner: function (width, height, point) {-->
-<!--                var chart = this.chart,-->
-<!--                    position;-->
-
-<!--                if (point.isHeader) {-->
-<!--                    position = {-->
-<!--                        x: Math.max(-->
-<!--                            // Left side limit-->
-<!--                            chart.plotLeft,-->
-<!--                            Math.min(-->
-<!--                                point.plotX + chart.plotLeft - width / 2,-->
-<!--                                // Right side limit-->
-<!--                                chart.chartWidth - width - chart.marginRight-->
-<!--                            )-->
-<!--                        ),-->
-<!--                        y: point.plotY-->
-<!--                    };-->
-<!--                } else {-->
-<!--                    position = {-->
-<!--                        x: point.series.chart.plotLeft,-->
-<!--                        y: point.series.yAxis.top - chart.plotTop-->
-<!--                    };-->
-<!--                }-->
-
-<!--                return position;-->
-<!--            }-->
-<!--        },-->
-<!--        series: [{-->
-<!--            type: 'ohlc',-->
-<!--            id: 'aapl-ohlc',-->
-<!--            name: 'AAPL Stock Price',-->
-<!--            data: ohlc-->
-<!--        }, {-->
-<!--            type: 'column',-->
-<!--            id: 'aapl-volume',-->
-<!--            name: 'AAPL Volume',-->
-<!--            data: volume,-->
-<!--            yAxis: 1-->
-<!--        }],-->
-<!--        responsive: {-->
-<!--            rules: [{-->
-<!--                condition: {-->
-<!--                    maxWidth: 800-->
-<!--                },-->
-<!--                chartOptions: {-->
-<!--                    rangeSelector: {-->
-<!--                        inputEnabled: false-->
-<!--                    },-->
-<!--                }-->
-<!--            }]-->
-<!--        },-->
-<!--&lt;!&ndash;        chart:{&ndash;&gt;-->
-<!--&lt;!&ndash;            height: 700,&ndash;&gt;-->
-<!--&lt;!&ndash;        }&ndash;&gt;-->
-<!--        });-->
-<!--        }-->
-<!--    });-->
-<!--    </script>-->
-<!--</div>-->
 
 {% endblock %}
