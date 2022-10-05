@@ -52,8 +52,8 @@
                 xaxis: {
                     autorange: true,
                     domain: [0, 1],
-                    title: 'Date',
-                    type: 'date'
+                    title: 'date',
+                    type: 'string'
                 },
                 yaxis: {
                     autorange: true,
@@ -86,6 +86,9 @@
                 var xr_min = xrange[0],
                     xr_max = xrange[1],
                     layout_change = {};
+
+                console.log('xr_min=',xr_min);
+                console.log('xr_max=',xr_max);
                 if (graphDiv.data) {
                     var trace = graphDiv.data[0];  // 1st trace
                     console.log('trace = ',trace);
@@ -99,21 +102,35 @@
                             xr_max = new Date(xr_max);
                         }
                         // Get visible indexes
-                        for (var xi = 0; xi < trace.x.length; xi++) {
-                            x = trace.x[xi];
-                            if (!vi_min) {
-                                if (x >= xr_min) {
-                                    vi_min = Math.max(0, xi);  // Need 1 before the range
-                                }
-                            } else {
-                                if (x <= xr_max) vi_max = Math.min(xi, trace.x.length); // Need 1 after
-                                else if (!vi_max) {
-                                    vi_max = Math.min(xi, trace.x.length);
-                                    break
-                                }
-                                else break
-                            }
-                        }
+                        x_first = trace.x[0];
+                        x_end = trace.x[trace.x.length];
+
+                        console.log('expect vi_min =', xr_min);
+                        console.log('expect vi_max =', xr_max);
+                        console.log('trace.x.length =', trace.x.length);
+                        vi_min = Math.ceil(xr_min);
+                        vi_max = Math.floor(xr_max);
+
+<!--                        for (var xi = 0; xi < trace.x.length; xi++) {-->
+<!--                            x = trace.x[xi];-->
+<!--                            if (!vi_min) {-->
+<!--                                if (x >= xr_min) {-->
+<!--                                    vi_min = Math.max(0, xi);  // Need 1 before the range-->
+<!--                                    console.log('vi_min=',vi_min);-->
+<!--                                }-->
+<!--                            } else {-->
+<!--                                if (x <= xr_max) vi_max = Math.min(xi, trace.x.length); // Need 1 after-->
+<!--                                else if (!vi_max) {-->
+<!--                                    vi_max = Math.min(xi, trace.x.length);-->
+<!--                                    console.log('vi_max=',vi_max);-->
+<!--                                    break-->
+<!--                                }-->
+<!--                                else {-->
+<!--                                    console.log('vi_max=',vi_max);-->
+<!--                                    break-->
+<!--                                }-->
+<!--                            }-->
+<!--                        }-->
                         // Get min-max y values between indexes
                         for (var t = 0; t < graphDiv.data.length; t++) {
                             var y_min = Number.MAX_VALUE,

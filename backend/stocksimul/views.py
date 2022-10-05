@@ -120,7 +120,7 @@ def ajax_plotly_chart_data(request):
     date = []
     volume = []
     for stock in stocks:
-        time_tuple = stock.date.strftime('%Y-%m-%d')
+        time_tuple = stock.date.strftime('%Y/%m/%d')
         date.append(time_tuple)
         open.append(stock.open)
         close.append(stock.close)
