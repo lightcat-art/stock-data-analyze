@@ -62,13 +62,12 @@
             };
             var graphDiv = document.getElementById('container-1');
             Plotly.newPlot(graphDiv, data, layout);
-
+            console.log('newPlot end');
 <!--            document.getElementById('container-1').onclick = function(e){-->
 <!--                alert("click");-->
 <!--            }-->
-            /**
-            * AutoScale
-            */
+
+            /** AutoScale start*/
             var relayout_semaphore = false,
                 vi_min = null, vi_max = null;
             graphDiv.on('plotly_relayout', function (event_data) {
@@ -86,8 +85,6 @@
                 var xr_min = xrange[0],
                     xr_max = xrange[1],
                     layout_change = {};
-                console.log('xr_min=',xr_min);
-                console.log('xr_max=',xr_max);
                 if (graphDiv.data) {
                     var trace = graphDiv.data[0];  // 1st trace
                     console.log('trace = ',trace);
@@ -107,6 +104,10 @@
                                 if (x >= xr_min) vi_min = Math.max(0, xi - 1);  // Need 1 before the range
                             } else {
                                 if (x <= xr_max) vi_max = Math.min(xi + 1, trace.x.length); // Need 1 after
+                                else if (!vi_max) {
+                                    vi_max = Math.min(xi, trace.x.length);
+                                    break
+                                }
                                 else break
                             }
                         }
