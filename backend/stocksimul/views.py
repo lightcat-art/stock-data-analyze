@@ -9,6 +9,7 @@ from plotly.subplots import make_subplots
 from pykrx.website.krx.market import wrap
 import plotly.graph_objects as go
 
+from .config import stockConfig
 from .forms import StockSimulParamForm
 from .models import StockPrice, StockInfoUpdateStatus, StockEvent, StockSimulParam
 
@@ -47,7 +48,14 @@ def stock_simul_result(request, pk):
 
     update_event_info(start_date_str)
 
-    event_info = get_object_or_404(StockEvent, event_name=event_name)
+    try:
+        event_info = StockEvent.objects.get(event_name=event_name)
+    except StockEvent.DoesNotExist as e:
+        # render_to_response method is deprecated.
+        return render(request, 'stocksimul/error_msg.html', {'error_type': 'MNE',
+                                                             'event_name': event_name, 'exception': e})
+
+    # event_info = get_object_or_404(StockEvent, event_name=event_name)
     # print('event_name={}, event_info={}'.format(event_name, event_info))
     # print('stock_event_id = {}'.format(event_info.stock_event_id))
 
@@ -139,8 +147,7 @@ def update_stock_price(event_info):
     :param event_info: 특정 종목에 해당하는 StockEvent 모델 객체
     :return:
     '''
-    # 종목별 주가정보 업데이트 날짜주기
-    PRICE_INFO_UPDATE_PERIOD = 1
+
     today = datetime.datetime.now().strftime('%Y%m%d')
     price_info_status_qryset = StockInfoUpdateStatus.objects.filter(table_type='P') \
         .filter(stock_event_id=event_info.stock_event_id)
@@ -160,7 +167,7 @@ def update_stock_price(event_info):
         info_none_yn = True
     # 이전에 업데이트 된 이력이 있고, 업데이트 주기가 도달하거나 초과한 경우
     elif (datetime.date.today() - price_info_status_qryset[0].mod_dt) \
-            >= timedelta(days=PRICE_INFO_UPDATE_PERIOD) and price_info_status_qryset.first().update_type == 'UD':
+            >= timedelta(days=stockConfig.PRICE_INFO_UPDATE_PERIOD) and price_info_status_qryset.first().update_type == 'UD':
         print('update_stock_price : add recent data for {}'.format(event_info.event_name))
         update_start_dt = (price_info_status_qryset[0].mod_dt + timedelta(days=1)).strftime('%Y%m%d')
         price_info_status_model = price_info_status_qryset.first()
@@ -205,8 +212,6 @@ def update_event_info(start_date_str):
     :param start_date_str: 시뮬레이션 시작날짜 입력값
     :return:
     '''
-    # 종목정보 업데이트 날짜주기
-    EVENT_INFO_UPDATE_PERIOD = 3
     event_info_status_qryset = StockInfoUpdateStatus.objects.filter(table_type='E')
     # print('event_info_status={}'.format(event_info_status))
     # print('event_info_status count={}'.format(event_info_status.count()))
@@ -216,7 +221,7 @@ def update_event_info(start_date_str):
         print('update_event_info : date substract result = ',
               datetime.date.today() - event_info_status_qryset.first().mod_dt)
     if event_info_status_qryset.count() == 0 or (datetime.date.today() - event_info_status_qryset.first().mod_dt) \
-            >= timedelta(days=EVENT_INFO_UPDATE_PERIOD):
+            >= timedelta(days=stockConfig.EVENT_INFO_UPDATE_PERIOD):
         whole_code_df = wrap.get_market_ticker_and_name(date=start_date_str, market='ALL')
         whole_code_df = [{'event_code': k, 'event_name': v} for k, v in whole_code_df.iteritems()]
         # 종목코드가 변경되는 경우, 상장폐지 되는 경우, 신규상장되는 경우를 고려하여 업데이트 쿼리 작성 필요.

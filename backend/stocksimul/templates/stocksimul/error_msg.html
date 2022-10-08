@@ -1,0 +1,14 @@
+{% extends 'stocksimul/base.html' %}
+{% block content %}
+<div class="content text-center center_div">
+    <div class="py-5">
+        {% if error_type == 'MNE' %}
+            <h1>Model Does Not Exist</h1>
+            <p></p>
+            <p>exception = {{exception}}</p>
+            <p>Data does not exist about {{event_name}}</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
