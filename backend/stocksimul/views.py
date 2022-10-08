@@ -225,10 +225,10 @@ def update_event_info(start_date_str):
         whole_code_df = wrap.get_market_ticker_and_name(date=start_date_str, market='ALL')
         whole_code_df = [{'event_code': k, 'event_name': v} for k, v in whole_code_df.iteritems()]
         # 종목코드가 변경되는 경우, 상장폐지 되는 경우, 신규상장되는 경우를 고려하여 업데이트 쿼리 작성 필요.
-        # with transaction.atomic():
-        #     for item in whole_code_df:
-        #         entry = StockEvent(**item)
-        #         entry.save()
+        with transaction.atomic():
+            for item in whole_code_df:
+                entry = StockEvent(**item)
+                entry.save()
         info_none_yn = event_info_status_qryset.count() == 0
         if info_none_yn:
             status_dict = {'table_type': 'E', 'mod_dt': datetime.datetime.now(), 'reg_dt': datetime.datetime.now()}

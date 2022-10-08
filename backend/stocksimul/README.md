@@ -19,3 +19,6 @@ python manage.py migrate [app]
 # run django
 python manage.py runserver [port]
 ```
+
+### 4. 초기 세팅
+1. 종목 한개 (ex. 삼성전자) 를 입력해서 조회해야 데이터를 받아와 그다음부터 자동완성 기능 이용가능.
