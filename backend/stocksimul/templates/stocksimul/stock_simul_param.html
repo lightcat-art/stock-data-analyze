@@ -42,10 +42,45 @@
                 {% endfor %}
 <!--                <button type="submit" class="submit btn btn-default">Submit</button>-->
 <!--                <input type="submit" value="조회">-->
+
                 <button class="btn btn-lg btn-primary btn-block" type="submit"
                  style="width:150px">Search</button>
             </form>
+            <button class="btn btn-lg btn-primary btn-block" id="btn-send" type="submit"
+                 style="width:150px">Ajax Search</button>
+        </div>
+        <div id="bg-spinner">
+            <div id="position-spinner">
+                <span id="spinner">spinner test</span>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- JavaScript Section -->
+
+<!-- ajax Calls(backend response) -->
+<script>
+    jQuery(function ($) {
+        console.log('spinner ajax start');
+        $(document).ajaxSend(function() {
+            $("bg-spinner").fadeIn(500);
+        });
+        $("btn-send").click(function() {
+            console.log('spinner ajax click');
+            $ajax({
+                type: 'POST',
+                success: function(data){
+                    var d = $.parseJSON(data);
+                    alert('parse finish');
+                }
+            }).done(function() {
+                setTimeout(function() {
+                    $("#bg-spinner").fadeOut(500);
+                }, 700);
+            });
+        });
+    });
+</script>
+
 {% endblock %}

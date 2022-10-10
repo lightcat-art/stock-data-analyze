@@ -33,6 +33,9 @@ def stock_simul_param(request):
         form = StockSimulParamForm()
     return render(request, 'stocksimul/stock_simul_param.html', {'form': form, 'show_event': event_list})
 
+def redirect_stock_simul_result(request):
+    print('ajax_stock_simul_result : click check button')
+    return redirect('stock_simul_result', pk=1)
 
 def stock_simul_result(request, pk):
     simul_param = get_object_or_404(StockSimulParam, pk=pk)
