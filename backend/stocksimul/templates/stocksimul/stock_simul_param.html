@@ -1,5 +1,12 @@
 {% extends 'stocksimul/base.html' %}
 {% block content %}
+
+<div id="bg-spinner">
+    <div id="position-spinner">
+        <span id="spinner"></span>
+    </div>
+</div>
+
 <div class="content text-center container center_div">
     <div class="py-5">
       <h1>주식 차트 조회 서비스</h1>
@@ -43,17 +50,11 @@
 <!--                <button type="submit" class="submit btn btn-default">Submit</button>-->
 <!--                <input type="submit" value="조회">-->
 
-                <button class="btn btn-lg btn-primary btn-block" type="submit"
+                <button class="btn btn-lg btn-primary btn-block" id="btn-send" type="submit"
                  style="width:150px">Search</button>
             </form>
-            <button class="btn btn-lg btn-primary btn-block" id="btn-send" type="submit"
-                 style="width:150px">Ajax Search</button>
         </div>
-        <div id="bg-spinner">
-            <div id="position-spinner">
-                <span id="spinner">spinner test</span>
-            </div>
-        </div>
+
     </div>
 </div>
 
@@ -61,26 +62,33 @@
 
 <!-- ajax Calls(backend response) -->
 <script>
+/**
     jQuery(function ($) {
         console.log('spinner ajax start');
         $(document).ajaxSend(function() {
-            $("bg-spinner").fadeIn(500);
+            console.log('spinner ajaxSend start');
+            $("#bg-spinner").fadeIn(500);
         });
-        $("btn-send").click(function() {
+        document.getElementById('btn-send').onclick = function(e) {
             console.log('spinner ajax click');
-            $ajax({
-                type: 'POST',
+            // ajax Start
+            $.ajax({
+                type: 'GET',
                 success: function(data){
-                    var d = $.parseJSON(data);
-                    alert('parse finish');
+                    console.log('ajax stock_simul_param val = ',data);
+                },
+                fail: function(data){
+                    console.log('spinner ajax failed');
                 }
             }).done(function() {
                 setTimeout(function() {
                     $("#bg-spinner").fadeOut(500);
                 }, 700);
             });
-        });
+            // ajax End
+        };
     });
+    **/
 </script>
 
 {% endblock %}

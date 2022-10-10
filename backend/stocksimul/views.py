@@ -1,4 +1,5 @@
 import datetime
+import time
 from datetime import timedelta
 from time import strptime, mktime
 
@@ -28,16 +29,23 @@ def stock_simul_param(request):
             simul_param = form.save(commit=False)  # 폼을 저장하지만, 바로 모델에 저장하지 않도록 commit옵션 False
             # print('stock_simul_param input = ', simul_param.event_name)
             simul_param.save()
+            event_name = simul_param.event_name
+            start_date_str = simul_param.start_date.strftime('%Y%m%d')
+            end_date_str = (simul_param.start_date + timedelta(days=simul_param.days)).strftime('%Y%m%d')
+            redirect('stock_simul_result', pk=simul_param.pk)
+            print('stock_simul_param : redirect to stock_simul_result finish')
+            time.sleep(2)
+            print('stock_simul_param : time sleep 2s finish')
+            # return render(request, 'stocksimul/stock_simul_param.html', {'form': form, 'show_event': event_list})
             return redirect('stock_simul_result', pk=simul_param.pk)
     else:
         form = StockSimulParamForm()
     return render(request, 'stocksimul/stock_simul_param.html', {'form': form, 'show_event': event_list})
 
-def redirect_stock_simul_result(request):
-    print('ajax_stock_simul_result : click check button')
-    return redirect('stock_simul_result', pk=1)
 
 def stock_simul_result(request, pk):
+    time.sleep(3)
+    print('stock_simul_result : time sleep 3s finish')
     simul_param = get_object_or_404(StockSimulParam, pk=pk)
     print('input param : start_date = {}'.format(simul_param.start_date))
     print('input param : days = {}'.format(simul_param.days))
@@ -71,7 +79,6 @@ def stock_simul_result(request, pk):
     #
     # graph = make_chart_data(stocks, event_name)
     # print(graph)
-
     return render(request, 'stocksimul/stock_simul_result.html', {'event_name': event_name,
                                                                   'start_date_str': start_date_str,
                                                                   'end_date_str': end_date_str})
@@ -140,7 +147,7 @@ def ajax_plotly_chart_data(request):
         volume.append(stock.volume)
 
     response = {}
-    response.update({'date': date,'open':open,'close':close, 'high':high, 'low':low, 'volume':volume})
+    response.update({'date': date, 'open': open, 'close': close, 'high': high, 'low': low, 'volume': volume})
     return JsonResponse(response)
 
 
@@ -170,7 +177,8 @@ def update_stock_price(event_info):
         info_none_yn = True
     # 이전에 업데이트 된 이력이 있고, 업데이트 주기가 도달하거나 초과한 경우
     elif (datetime.date.today() - price_info_status_qryset[0].mod_dt) \
-            >= timedelta(days=stockConfig.PRICE_INFO_UPDATE_PERIOD) and price_info_status_qryset.first().update_type == 'UD':
+            >= timedelta(
+        days=stockConfig.PRICE_INFO_UPDATE_PERIOD) and price_info_status_qryset.first().update_type == 'UD':
         print('update_stock_price : add recent data for {}'.format(event_info.event_name))
         update_start_dt = (price_info_status_qryset[0].mod_dt + timedelta(days=1)).strftime('%Y%m%d')
         price_info_status_model = price_info_status_qryset.first()
@@ -325,7 +333,6 @@ def make_chart_data(stocks, event_name):
     # fig.layout.on_change(zoom, 'xaxis.range')
 
     graph = fig.to_html(full_html=False, default_height='150%')
-
 
     # Test
     #
