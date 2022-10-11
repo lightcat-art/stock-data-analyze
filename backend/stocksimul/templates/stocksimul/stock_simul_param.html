@@ -112,6 +112,14 @@
             data: fd,
             success: function(response){
                 console.log(response);
+                $.post("stock/simul/result/", {'csrfmiddlewaretoken':csrf[0].value,
+                                                'event_name': response.event_name,
+                                                'start_date_str': response.start_date_str,
+                                                'end_date_str': response.end_date_str},
+                                                function(data){
+                                                    console.log(data);
+                                                });
+
             },
             error: function(error){
                 console.log(error);

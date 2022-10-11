@@ -34,15 +34,34 @@ def stock_simul_param(request):
         form = StockSimulParamForm(request.POST or None)
         data = {}
         if form.is_valid():
-            event_name = form.cleaned_data.get('event_name')
-            start_date = form.cleaned_data.get('start_date')
-            days = form.cleaned_data.get('days')
-            print('stock_simul_param : ajax : event_name = {}, start_date = {}, days = {}'
-                  .format(event_name, start_date, days))
+            # event_name = form.cleaned_data.get('event_name')
+            # start_date = form.cleaned_data.get('start_date')
+            # days = form.cleaned_data.get('days')
+            # print('stock_simul_param : ajax : event_name = {}, start_date = {}, days = {}'
+            #       .format(event_name, start_date, days))
             simul_param = form.save(commit=False)
+            simul_param.save()
             print('stock_simul_param : ajax model data : event_name = {}, start_date = {}, days = {}'
                   .format(simul_param.event_name, simul_param.start_date, simul_param.days))
+
+            # simul_param = get_object_or_404(StockSimulParam, pk=simul_param.pk)
+
+            event_name = simul_param.event_name
+            start_date_str = simul_param.start_date.strftime('%Y%m%d')
+            end_date_str = (simul_param.start_date + timedelta(days=simul_param.days)).strftime('%Y%m%d')
+
+            update_event_info(start_date_str)
+            try:
+                event_info = StockEvent.objects.get(event_name=event_name)
+            except StockEvent.DoesNotExist as e:
+                # render_to_response method is deprecated.
+                return render(request, 'stocksimul/error_msg.html', {'error_type': 'MNE',
+                                                                     'event_name': event_name, 'exception': e})
+            update_stock_price(event_info)
+
             data['event_name'] = form.cleaned_data.get('event_name')
+            data['start_date_str'] = start_date_str
+            data['end_date_str'] = end_date_str
             data['status'] = 'ok'
             return JsonResponse(data)
     else:
@@ -50,9 +69,18 @@ def stock_simul_param(request):
     return render(request, 'stocksimul/stock_simul_param.html', {'form': form, 'show_event': event_list})
 
 
+def render_stock_simul_result(request):
+    print('render_stock_simul_result : request = ', request.POST)
+    event_name = request.POST.get('event_name')
+    start_date_str = request.POST.get('start_date_str')
+    end_date_str = request.POST.get('end_date_str')
+    print('render_stock_simul_result : event_name = {}, start_date = {}, end_date = {}'.format(event_name, start_date_str, end_date_str))
+    return render(request, 'stocksimul/stock_simul_result.html', {'event_name': event_name,
+                                                                  'start_date_str': start_date_str,
+                                                                  'end_date_str': end_date_str})
+
+
 def stock_simul_result(request, pk):
-    time.sleep(3)
-    print('stock_simul_result : time sleep 3s finish')
     simul_param = get_object_or_404(StockSimulParam, pk=pk)
     print('input param : start_date = {}'.format(simul_param.start_date))
     print('input param : days = {}'.format(simul_param.days))
