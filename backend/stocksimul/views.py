@@ -21,23 +21,30 @@ def stock_simul_param(request):
     event_list = StockEvent.objects.all
     # event_list = (('삼성전자','삼성전자'),('삼성생명','삼성생명'))
     # print('event_list = ',event_list)
-    if request.method == "POST":
-        print(request.POST)
-        form = StockSimulParamForm(request.POST)
-        # print('stock_simul_param input = ', form)
-        if form.is_valid():  # 모든 필드에 값이 있어야 하고, 잘못된 값이 있다면 저장되지 않도록 체크.
-            simul_param = form.save(commit=False)  # 폼을 저장하지만, 바로 모델에 저장하지 않도록 commit옵션 False
-            # print('stock_simul_param input = ', simul_param.event_name)
-            simul_param.save()
-            event_name = simul_param.event_name
-            start_date_str = simul_param.start_date.strftime('%Y%m%d')
-            end_date_str = (simul_param.start_date + timedelta(days=simul_param.days)).strftime('%Y%m%d')
-            redirect('stock_simul_result', pk=simul_param.pk)
-            print('stock_simul_param : redirect to stock_simul_result finish')
-            time.sleep(2)
-            print('stock_simul_param : time sleep 2s finish')
-            # return render(request, 'stocksimul/stock_simul_param.html', {'form': form, 'show_event': event_list})
-            return redirect('stock_simul_result', pk=simul_param.pk)
+    # if request.method == "POST":
+    #     print(request.POST)
+    #     form = StockSimulParamForm(request.POST)
+    #     # print('stock_simul_param input = ', form)
+    #     if form.is_valid():  # 모든 필드에 값이 있어야 하고, 잘못된 값이 있다면 저장되지 않도록 체크.
+    #         simul_param = form.save(commit=False)  # 폼을 저장하지만, 바로 모델에 저장하지 않도록 commit옵션 False
+    #         # print('stock_simul_param input = ', simul_param.event_name)
+    #         simul_param.save()
+    #         return redirect('stock_simul_result', pk=simul_param.pk)
+    if request.is_ajax():  # request.method == "POST": 로 하여도 ajax가 POST로 들어오기 때문에 인식가능.
+        form = StockSimulParamForm(request.POST or None)
+        data = {}
+        if form.is_valid():
+            event_name = form.cleaned_data.get('event_name')
+            start_date = form.cleaned_data.get('start_date')
+            days = form.cleaned_data.get('days')
+            print('stock_simul_param : ajax : event_name = {}, start_date = {}, days = {}'
+                  .format(event_name, start_date, days))
+            simul_param = form.save(commit=False)
+            print('stock_simul_param : ajax model data : event_name = {}, start_date = {}, days = {}'
+                  .format(simul_param.event_name, simul_param.start_date, simul_param.days))
+            data['event_name'] = form.cleaned_data.get('event_name')
+            data['status'] = 'ok'
+            return JsonResponse(data)
     else:
         form = StockSimulParamForm()
     return render(request, 'stocksimul/stock_simul_param.html', {'form': form, 'show_event': event_list})
