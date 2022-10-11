@@ -69,12 +69,13 @@ def stock_simul_param(request):
     return render(request, 'stocksimul/stock_simul_param.html', {'form': form, 'show_event': event_list})
 
 
-def render_stock_simul_result(request):
-    print('render_stock_simul_result : request = ', request.POST)
-    event_name = request.POST.get('event_name')
-    start_date_str = request.POST.get('start_date_str')
-    end_date_str = request.POST.get('end_date_str')
-    print('render_stock_simul_result : event_name = {}, start_date = {}, end_date = {}'.format(event_name, start_date_str, end_date_str))
+def render_stock_simul_result(request, event_name, start_date_str, end_date_str):
+    # print('render_stock_simul_result : request = ', request.POST)
+    # event_name = request.POST.get('event_name')
+    # start_date_str = request.POST.get('start_date_str')
+    # end_date_str = request.POST.get('end_date_str')
+    # print('render_stock_simul_result : ajax param event_name = {}, start_date = {}, end_date = {}'.format(event_name, start_date_str, end_date_str))
+    print('render_stock_simul_result : url param event_name = {}, start_date = {}, end_date = {}'.format(event_name, start_date_str, end_date_str))
     return render(request, 'stocksimul/stock_simul_result.html', {'event_name': event_name,
                                                                   'start_date_str': start_date_str,
                                                                   'end_date_str': end_date_str})
