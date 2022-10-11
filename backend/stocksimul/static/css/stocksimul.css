@@ -35,19 +35,20 @@
     display: flex;
     height: 100%;
     justify-content: center;
-    aligh-items: center;
+    align-items: center;
 }
 
 #spinner {
     height: 60px;
     width: 60px;
     border-radius: 50%;
-    border: 6px solid #007bff;
+    border: 6px solid #d3d3d3;
+    border-top: 6px solid #007bff;
     animation: loading 1s infinite linear;
 }
 
 @keyframes loading {
     to {
-        transform: rotate(360eg);
+        transform: rotate(360deg);
     }
 }

@@ -96,6 +96,11 @@
     const start_date = document.getElementById('param-start-date');
     console.log(csrf);
     const url = "";
+    console.log('spinner ajax start');
+    $(document).ajaxSend(function() {
+        console.log('spinner ajaxSend start');
+        $("#bg-spinner").fadeIn(500);
+    });
     form.addEventListener('submit', e=>{
         //console.log('submit event start');
         e.preventDefault();
@@ -122,6 +127,10 @@
             cache: false,
             contentType: false,
             processData: false,
+        }).done(function() {
+                setTimeout(function() {
+                    $("#bg-spinner").fadeOut(500);
+                }, 700);
         });
     });
     console.log(form);
