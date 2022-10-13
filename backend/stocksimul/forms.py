@@ -12,11 +12,13 @@ class StockSimulParamForm(forms.ModelForm):
             'days': forms.NumberInput(attrs={
                 'class': 'form-control chart_param',
                 # 'style': 'width:150px',
-                'placeholder': '조회기간 입력'
+                'placeholder': '조회기간 입력',
+                'id': 'param-days'
             }),
             'start_date': forms.DateInput(attrs={'class': 'form-control chart_param_date',
                                                  'placeholder': 'Select a date',
                                                  'type': 'date',
+                                                 'id': 'param-start-date'
                                                  # 'style': 'width:150px',
                                                  }),
         }

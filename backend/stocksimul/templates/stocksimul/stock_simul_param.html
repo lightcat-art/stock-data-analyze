@@ -1,5 +1,12 @@
 {% extends 'stocksimul/base.html' %}
 {% block content %}
+
+<div id="bg-spinner">
+    <div id="position-spinner">
+        <span id="spinner"></span>
+    </div>
+</div>
+
 <div class="content text-center container center_div">
     <div class="py-5">
       <h1>주식 차트 조회 서비스</h1>
@@ -10,7 +17,7 @@
 <!--            <h2>정보 입력</h2>-->
             <p></p>
 <!--             Form을 제출할때 같은 뷰를 다시 불러옴. 이때 request에는 우리가 입력했던 데이터를 request.POST에 가지고 있음.-->
-            <form action="" method="POST" class="form-signin">{% csrf_token %}
+            <form id="p-form" class="form-signin">{% csrf_token %}
 <!--                 입력받은 modelForm 내 field를 불러와 loop 수행-->
                 {% for field in form %}
                 <div class="field_wrapper">
@@ -23,7 +30,7 @@
 <!--                        {{ field.label_tag}} -->
                         <!-- name attribute는 form 내 searchable dropdown 목적의 필드명과 같아야 함. -->
                         <!-- input tag의 list attribute는 datalist tag의 id 와 같아야 함 -->
-                        <input type="text" list="eventlist" class="form-control chart_param"
+                        <input type="text" id="param-event-name" list="eventlist" class="form-control chart_param"
                                name="event_name" placeholder="종목 검색">
                         <datalist id="eventlist">
                             <!-- searchable dropdown 만들 데이터 생성 -->
@@ -42,10 +49,93 @@
                 {% endfor %}
 <!--                <button type="submit" class="submit btn btn-default">Submit</button>-->
 <!--                <input type="submit" value="조회">-->
-                <button class="btn btn-lg btn-primary btn-block" type="submit"
+
+                <button class="btn btn-lg btn-primary btn-block" id="btn-send" type="submit"
                  style="width:150px">Search</button>
             </form>
         </div>
+
     </div>
 </div>
+
+<!-- JavaScript Section -->
+
+<!-- ajax Calls(backend response) -->
+<script>
+/**
+    jQuery(function ($) {
+        console.log('spinner ajax start');
+        $(document).ajaxSend(function() {
+            console.log('spinner ajaxSend start');
+            $("#bg-spinner").fadeIn(500);
+        });
+        document.getElementById('btn-send').onclick = function(e) {
+            console.log('spinner ajax click');
+            // ajax Start
+            $.ajax({
+                type: 'GET',
+                success: function(data){
+                    console.log('ajax stock_simul_param val = ',data);
+                },
+                fail: function(data){
+                    console.log('spinner ajax failed');
+                }
+            }).done(function() {
+                setTimeout(function() {
+                    $("#bg-spinner").fadeOut(500);
+                }, 700);
+            });
+            // ajax End
+        };
+    });
+    **/
+    const csrf = document.getElementsByName('csrfmiddlewaretoken');
+    const form = document.getElementById('p-form');
+    const event_name = document.getElementById('param-event-name');
+    const days = document.getElementById('param-days');
+    const start_date = document.getElementById('param-start-date');
+    console.log(csrf);
+    const url = "";
+    console.log('spinner ajax start');
+    $(document).ajaxSend(function() {
+        console.log('spinner ajaxSend start');
+        $("#bg-spinner").fadeIn(500);
+    });
+    form.addEventListener('submit', e=>{
+        //console.log('submit event start');
+        e.preventDefault();
+
+        const fd = new FormData();
+        fd.append('csrfmiddlewaretoken', csrf[0].value);
+        fd.append('event_name', event_name.value);
+        fd.append('start_date', start_date.value);
+        fd.append('days', days.value);
+        $.ajax({
+            type: 'POST',
+            url: url,
+            enctype: 'multipart/form-data',
+            data: fd,
+            success: function(response){
+                console.log(response);
+                window.location = 'stock/simul/result/'+response.event_name
+                                        +'_'+response.start_date_str+'_'+response.end_date_str;
+
+            },
+            error: function(error){
+                console.log(error);
+            },
+            cache: false,
+            contentType: false,
+            processData: false,
+        }).done(function() {
+                setTimeout(function() {
+                    $("#bg-spinner").fadeOut(500);
+                }, 700);
+        });
+    });
+    console.log(form);
+
+</script>
+<!-- ajax Calls(backend response) -->
+
 {% endblock %}

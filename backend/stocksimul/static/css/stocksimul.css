@@ -17,3 +17,38 @@
     width:370px;
     text-align: center;
 }
+
+/* ---------------------------------
+# SPINNER
+--------------------------------- */
+#bg-spinner {
+    top: 0;
+    z-index: 100;
+    height: 100%;
+    width: 100%;
+    position: fixed;
+    display: none;
+    background-color: rgba(1,1,1,0.7);
+}
+
+#position-spinner {
+    display: flex;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+}
+
+#spinner {
+    height: 60px;
+    width: 60px;
+    border-radius: 50%;
+    border: 6px solid #d3d3d3;
+    border-top: 6px solid #007bff;
+    animation: loading 1s infinite linear;
+}
+
+@keyframes loading {
+    to {
+        transform: rotate(360deg);
+    }
+}

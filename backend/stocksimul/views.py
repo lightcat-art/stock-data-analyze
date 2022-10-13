@@ -1,4 +1,5 @@
 import datetime
+import time
 from datetime import timedelta
 from time import strptime, mktime
 
@@ -20,18 +21,64 @@ def stock_simul_param(request):
     event_list = StockEvent.objects.all
     # event_list = (('삼성전자','삼성전자'),('삼성생명','삼성생명'))
     # print('event_list = ',event_list)
-    if request.method == "POST":
-        print(request.POST)
-        form = StockSimulParamForm(request.POST)
-        # print('stock_simul_param input = ', form)
-        if form.is_valid():  # 모든 필드에 값이 있어야 하고, 잘못된 값이 있다면 저장되지 않도록 체크.
-            simul_param = form.save(commit=False)  # 폼을 저장하지만, 바로 모델에 저장하지 않도록 commit옵션 False
-            # print('stock_simul_param input = ', simul_param.event_name)
+    # if request.method == "POST":
+    #     print(request.POST)
+    #     form = StockSimulParamForm(request.POST)
+    #     # print('stock_simul_param input = ', form)
+    #     if form.is_valid():  # 모든 필드에 값이 있어야 하고, 잘못된 값이 있다면 저장되지 않도록 체크.
+    #         simul_param = form.save(commit=False)  # 폼을 저장하지만, 바로 모델에 저장하지 않도록 commit옵션 False
+    #         # print('stock_simul_param input = ', simul_param.event_name)
+    #         simul_param.save()
+    #         return redirect('stock_simul_result', pk=simul_param.pk)
+    if request.is_ajax():  # request.method == "POST": 로 하여도 ajax가 POST로 들어오기 때문에 인식가능.
+        form = StockSimulParamForm(request.POST or None)
+        data = {}
+        if form.is_valid():
+            # event_name = form.cleaned_data.get('event_name')
+            # start_date = form.cleaned_data.get('start_date')
+            # days = form.cleaned_data.get('days')
+            # print('stock_simul_param : ajax : event_name = {}, start_date = {}, days = {}'
+            #       .format(event_name, start_date, days))
+            simul_param = form.save(commit=False)
             simul_param.save()
-            return redirect('stock_simul_result', pk=simul_param.pk)
+            print('stock_simul_param : ajax model data : event_name = {}, start_date = {}, days = {}'
+                  .format(simul_param.event_name, simul_param.start_date, simul_param.days))
+
+            # simul_param = get_object_or_404(StockSimulParam, pk=simul_param.pk)
+
+            event_name = simul_param.event_name
+            start_date_str = simul_param.start_date.strftime('%Y%m%d')
+            end_date_str = (simul_param.start_date + timedelta(days=simul_param.days)).strftime('%Y%m%d')
+
+            update_event_info(start_date_str)
+            try:
+                event_info = StockEvent.objects.get(event_name=event_name)
+            except StockEvent.DoesNotExist as e:
+                # render_to_response method is deprecated.
+                return render(request, 'stocksimul/error_msg.html', {'error_type': 'MNE',
+                                                                     'event_name': event_name, 'exception': e})
+            update_stock_price(event_info)
+
+            data['event_name'] = form.cleaned_data.get('event_name')
+            data['start_date_str'] = start_date_str
+            data['end_date_str'] = end_date_str
+            data['status'] = 'ok'
+            return JsonResponse(data)
     else:
         form = StockSimulParamForm()
     return render(request, 'stocksimul/stock_simul_param.html', {'form': form, 'show_event': event_list})
+
+
+def render_stock_simul_result(request, event_name, start_date_str, end_date_str):
+    # print('render_stock_simul_result : request = ', request.POST)
+    # event_name = request.POST.get('event_name')
+    # start_date_str = request.POST.get('start_date_str')
+    # end_date_str = request.POST.get('end_date_str')
+    # print('render_stock_simul_result : ajax param event_name = {}, start_date = {}, end_date = {}'.format(event_name, start_date_str, end_date_str))
+    print('render_stock_simul_result : url param event_name = {}, start_date = {}, end_date = {}'.format(event_name, start_date_str, end_date_str))
+    return render(request, 'stocksimul/stock_simul_result.html', {'event_name': event_name,
+                                                                  'start_date_str': start_date_str,
+                                                                  'end_date_str': end_date_str})
 
 
 def stock_simul_result(request, pk):
@@ -68,7 +115,6 @@ def stock_simul_result(request, pk):
     #
     # graph = make_chart_data(stocks, event_name)
     # print(graph)
-
     return render(request, 'stocksimul/stock_simul_result.html', {'event_name': event_name,
                                                                   'start_date_str': start_date_str,
                                                                   'end_date_str': end_date_str})
@@ -137,7 +183,7 @@ def ajax_plotly_chart_data(request):
         volume.append(stock.volume)
 
     response = {}
-    response.update({'date': date,'open':open,'close':close, 'high':high, 'low':low, 'volume':volume})
+    response.update({'date': date, 'open': open, 'close': close, 'high': high, 'low': low, 'volume': volume})
     return JsonResponse(response)
 
 
@@ -167,7 +213,8 @@ def update_stock_price(event_info):
         info_none_yn = True
     # 이전에 업데이트 된 이력이 있고, 업데이트 주기가 도달하거나 초과한 경우
     elif (datetime.date.today() - price_info_status_qryset[0].mod_dt) \
-            >= timedelta(days=stockConfig.PRICE_INFO_UPDATE_PERIOD) and price_info_status_qryset.first().update_type == 'UD':
+            >= timedelta(
+        days=stockConfig.PRICE_INFO_UPDATE_PERIOD) and price_info_status_qryset.first().update_type == 'UD':
         print('update_stock_price : add recent data for {}'.format(event_info.event_name))
         update_start_dt = (price_info_status_qryset[0].mod_dt + timedelta(days=1)).strftime('%Y%m%d')
         price_info_status_model = price_info_status_qryset.first()
@@ -322,7 +369,6 @@ def make_chart_data(stocks, event_name):
     # fig.layout.on_change(zoom, 'xaxis.range')
 
     graph = fig.to_html(full_html=False, default_height='150%')
-
 
     # Test
     #
