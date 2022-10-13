@@ -3,8 +3,6 @@ name: Django CI Test
 on:
   push:
     branches: [ "master", "develop" ]
-  pull_request:
-    branches: [ "develop" ]
 
 jobs:
   build:
@@ -27,4 +25,4 @@ jobs:
         pip install -r backend/requirements.txt
     - name: Run Tests
       run: |
-        python backend/manage.py runserver
+        python -V
