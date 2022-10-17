@@ -28,10 +28,10 @@ jobs:
         echo "$AWS_HOME_PRIVATE_KEY" > ../private.key
         pwd
         sudo chmod 600 ../private.key
-        # echo "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+        echo "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts
         cat ../private.key
-        # cat ~/.ssh/known_hosts
-        # pwd ~/.ssh/known_hosts
+        cat ~/.ssh/known_hosts
+        pwd ~/.ssh/known_hosts
       shell: bash
       env:
         AWS_HOME_PRIVATE_KEY: ${{secrets.AWS_HOME_PRIVATE_KEY}}
