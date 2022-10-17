@@ -22,7 +22,7 @@ jobs:
 
     - name: Generate SSH Key
       run: |
-#       ensure mkdir .ssh folder
+        # ensure mkdir .ssh folder
         mkdir -p ~/.ssh/
         pwd
         echo "$AWS_HOME_PRIVATE_KEY" > ../private.key
