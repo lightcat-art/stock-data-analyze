@@ -29,6 +29,8 @@ jobs:
         pwd
         sudo chmod 600 ../private.key
         echo "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+        cat ../private.key
+        cat ~/.ssh/known_hosts
       shell: bash
       env:
         AWS_HOME_PRIVATE_KEY: ${{secrets.AWS_HOME_PRIVATE_KEY}}
@@ -37,7 +39,6 @@ jobs:
 
     - name: SSH Login
       run: |
-        pwd
         ssh -i "$AWS_KEY_PATH" ec2-user@15.164.222.29
         pwd
         echo "AWS_KEY_PATH=$AWS_KEY_PATH"
