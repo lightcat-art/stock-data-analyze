@@ -1,4 +1,4 @@
-name: Django CI Test
+name: Django CI Test=='
 
 on:
   push:
@@ -19,10 +19,33 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r backend/requirements.txt
-    - name: Run Tests
-      run: |
-        python -V
+    - name: Generate SSH Key
+      run : |
+#       ensure mkdir .ssh folder
+        mkdir -p ~/.ssh/
+        pwd
+        echo "$AWS_HOME_PRIVATE_KEY" > ../private.key
+        pwd
+        sudo chmod 600 ../private.key
+        echo "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      shell : bash
+      env:
+        AWS_HOME_PRIVATE_KEY: ${{secrets.AWS_HOME_PRIVATE_KEY}}
+        AWS_KNOWN_HOSTS: ${{secrets.AWS_KNOWN_HOSTS}}
+        AWS_KEY_PATH: ${{github.workspace}}/../private.key
+
+    - name: SSH Login
+      run : |
+        pwd
+        ssh -i "$AWS_KEY_PATH" ec2-user@15.164.222.29
+        pwd
+        mkdir AWS_LOGIN_SUCCESS
+        ls -al
+
+#    - name: Install Dependencies
+#      run: |
+#        python -m pip install --upgrade pip
+#        pip install -r backend/requirements.txt
+#    - name: Run Tests
+#      run: |
+#        python -V
