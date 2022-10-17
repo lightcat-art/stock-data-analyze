@@ -1,4 +1,4 @@
-name: Django CI Test=='
+name: Django CI Test
 
 on:
   push:
@@ -43,7 +43,7 @@ jobs:
         pwd
         echo "AWS_KEY_PATH=$AWS_KEY_PATH"
         echo "AWS_IP=$AWS_IP"
-        ssh-keygen -R $AWS_IP
+        ssh-keygen -R $AWS_IP -f ~/.ssh/known_hosts
         ssh -i $AWS_KEY_PATH $AWS_USER@$AWS_IP
         pwd
         mkdir AWS_LOGIN_SUCCESS
