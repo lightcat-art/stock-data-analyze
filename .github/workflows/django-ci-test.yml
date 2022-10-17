@@ -40,13 +40,15 @@ jobs:
     - name: SSH Login
       run: |
         pwd
-        ssh -i "$AWS_KEY_PATH" ec2-user@15.164.222.29
-        pwd
         echo "AWS_KEY_PATH=$AWS_KEY_PATH"
+        echo "AWS_IP=$AWS_IP"
+        ssh -i "$AWS_KEY_PATH" $AWS_IP
+        pwd
         mkdir AWS_LOGIN_SUCCESS
         ls -al
       shell: bash
       env:
+        AWS_IP: ${{secrets.AWS_IP}}
         AWS_KEY_PATH: ${{github.workspace}}/../private.key
 
 #    - name: Install Dependencies
