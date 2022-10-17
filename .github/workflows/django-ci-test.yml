@@ -19,8 +19,9 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+
     - name: Generate SSH Key
-      run : |
+      run: |
 #       ensure mkdir .ssh folder
         mkdir -p ~/.ssh/
         pwd
@@ -28,14 +29,14 @@ jobs:
         pwd
         sudo chmod 600 ../private.key
         echo "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts
-      shell : bash
+      shell: bash
       env:
         AWS_HOME_PRIVATE_KEY: ${{secrets.AWS_HOME_PRIVATE_KEY}}
         AWS_KNOWN_HOSTS: ${{secrets.AWS_KNOWN_HOSTS}}
         AWS_KEY_PATH: ${{github.workspace}}/../private.key
 
     - name: SSH Login
-      run : |
+      run: |
         pwd
         ssh -i "$AWS_KEY_PATH" ec2-user@15.164.222.29
         pwd
