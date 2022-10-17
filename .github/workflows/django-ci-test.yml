@@ -40,8 +40,12 @@ jobs:
         pwd
         ssh -i "$AWS_KEY_PATH" ec2-user@15.164.222.29
         pwd
+        echo "AWS_KEY_PATH=$AWS_KEY_PATH"
         mkdir AWS_LOGIN_SUCCESS
         ls -al
+      shell: bash
+      env:
+        AWS_KEY_PATH: ${{github.workspace}}/../private.key
 
 #    - name: Install Dependencies
 #      run: |
