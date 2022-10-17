@@ -42,7 +42,7 @@ jobs:
         pwd
         echo "AWS_KEY_PATH=$AWS_KEY_PATH"
         echo "AWS_IP=$AWS_IP"
-        ssh -i "$AWS_KEY_PATH" $AWS_IP
+        ssh -i $AWS_KEY_PATH $AWS_IP
         pwd
         mkdir AWS_LOGIN_SUCCESS
         ls -al
