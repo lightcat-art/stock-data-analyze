@@ -39,6 +39,7 @@ jobs:
 
     - name: SSH Login
       run: |
+        pwd
         ssh -i "$AWS_KEY_PATH" ec2-user@15.164.222.29
         pwd
         echo "AWS_KEY_PATH=$AWS_KEY_PATH"
