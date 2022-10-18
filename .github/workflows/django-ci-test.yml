@@ -20,6 +20,11 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: echo test
+      run: |
+        echo "echo_test" > ../echo.test
+        cat ../echo.test
+
     - name: Generate SSH Key
       run: |
         # ensure mkdir .ssh folder
