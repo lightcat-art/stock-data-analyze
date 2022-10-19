@@ -30,12 +30,12 @@ jobs:
         # ensure mkdir .ssh folder
         mkdir -p ~/.ssh/
         pwd
-        echo "$AWS_HOME_PRIVATE_KEY" > ../private.key
+        'echo "$AWS_HOME_PRIVATE_KEY" > ../private.key'
         pwd
         sudo chmod 600 ../private.key
-        echo "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts
-        cat ../private.key
-        cat ~/.ssh/known_hosts
+        'echo "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts'
+        tail -n 5 ../private.key
+        grep -r 'ssh-rsa' ~/.ssh/known_hosts
         pwd ~/.ssh/known_hosts
       shell: bash
       env:
@@ -46,9 +46,7 @@ jobs:
     - name: SSH Login
       run: |
         pwd
-        echo "AWS_KEY_PATH=$AWS_KEY_PATH"
-        echo "AWS_IP=$AWS_IP"
-        ssh-keygen -R $AWS_IP -f ~/.ssh/known_hosts
+        # ssh-keygen -R $AWS_IP -f ~/.ssh/known_hosts
         ssh -i $AWS_KEY_PATH $AWS_USER@$AWS_IP
         pwd
         mkdir AWS_LOGIN_SUCCESS
