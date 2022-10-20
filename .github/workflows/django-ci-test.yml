@@ -34,10 +34,12 @@ jobs:
         echo $PRIVATE_KEY > ../private.key
         pwd
         sudo chmod 600 ../private.key
+        export KNOWN_HOSTS="$AWS_KNOWN_HOSTS"
+        echo $KNOWN_HOSTS > ~/.ssh/known_hosts
         # echo "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts
         tail -n 5 ../private.key
-        # grep -r 'ssh-rsa' ~/.ssh/known_hosts
-        # pwd ~/.ssh/known_hosts
+        grep -r 'ssh-rsa' ~/.ssh/known_hosts
+        pwd ~/.ssh/known_hosts
       shell: bash
       env:
         AWS_HOME_PRIVATE_KEY: ${{secrets.AWS_HOME_PRIVATE_KEY}}
