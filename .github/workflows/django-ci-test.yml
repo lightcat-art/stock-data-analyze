@@ -49,7 +49,7 @@ jobs:
     - name: SSH Login
       run: |
         pwd
-        # ssh-keygen -R $AWS_IP -f ~/.ssh/known_hosts
+        ssh-keygen -R $AWS_IP -f ~/.ssh/known_hosts
         ssh -i $AWS_KEY_PATH $AWS_USER@$AWS_IP
         pwd
         mkdir AWS_LOGIN_SUCCESS
