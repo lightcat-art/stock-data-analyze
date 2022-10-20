@@ -30,13 +30,13 @@ jobs:
         # ensure mkdir .ssh folder
         mkdir -p ~/.ssh/
         pwd
-        'echo "$AWS_HOME_PRIVATE_KEY" > private-key'
+        echo ${{secrets.AWS_HOME_PRIVATE_KEY}} | base64 -d > ../private-key
         pwd
         sudo chmod 600 ../private.key
-        'echo "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts'
+        # echo "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts
         tail -n 5 ../private.key
-        grep -r 'ssh-rsa' ~/.ssh/known_hosts
-        pwd ~/.ssh/known_hosts
+        # grep -r 'ssh-rsa' ~/.ssh/known_hosts
+        # pwd ~/.ssh/known_hosts
       shell: bash
       env:
         AWS_HOME_PRIVATE_KEY: ${{secrets.AWS_HOME_PRIVATE_KEY}}
