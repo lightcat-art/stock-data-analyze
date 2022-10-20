@@ -30,7 +30,8 @@ jobs:
         # ensure mkdir .ssh folder
         mkdir -p ~/.ssh/
         pwd
-        echo ${{secrets.AWS_HOME_PRIVATE_KEY}} | base64 -d > ../private-key
+        export PRIVATE_KEY="$AWS_HOME_PRIVATE_KEY"
+        echo $PRIVATE_KEY > ../private.key
         pwd
         sudo chmod 600 ../private.key
         # echo "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts
