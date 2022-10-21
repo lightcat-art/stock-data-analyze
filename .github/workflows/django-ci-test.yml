@@ -32,9 +32,24 @@ jobs:
         username: ${{ secrets.AWS_USER }}
         key: ${{ secrets.AWS_HOME_PRIVATE_KEY }}
         port: ${{ secrets.AWS_PORT }}
+        # rhel8
         script: |
-          whoami
-          ls -al
+          pwd
+#          sudo yum -y update
+#          sudo yum install -y git
+#          git --version
+#          mkdir repository
+#          cd repository
+#          git config --global user.name 'lightcat-art'
+#          git config --global user.password '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'
+#          git clone https://github.com/lightcat-art/stock-data-analyze.git .
+#          light-cat
+#          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
+
+    - name: mysql install
+      run: |
+        pwd
+
 
 #    - name: Install Dependencies
 #      run: |
