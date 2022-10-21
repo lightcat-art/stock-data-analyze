@@ -35,7 +35,7 @@ jobs:
         # rhel8
         script: |
           pwd
-          sudo yum -y update
+          # sudo yum -y update
           sudo yum install -y git
           git --version
           mkdir repository
@@ -43,8 +43,8 @@ jobs:
           git config --global user.name '$GIT_USERNAME'
           git config --global user.password '$GIT_ACCESS_TOKEN'
           git clone https://github.com/lightcat-art/stock-data-analyze.git .
-          $GIT_USERNAME
-          $GIT_ACCESS_TOKEN
+          ${{secrets.GIT_USERNAME}}
+          ${{secrets.GIT_ACCESS_TOKEN}}
       env:
         GIT_USERNAME: ${{secrets.GIT_USERNAME}}
         GIT_ACCESS_TOKEN: ${{secrets.GIT_ACCESS_TOKEN}}
