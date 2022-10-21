@@ -48,6 +48,7 @@ jobs:
         sleep 5s
 
     - name: connect MySQL & test query
+      run: |
         mysql -u root -p root -e "USE MYSQL"
         mysql -u root -p root -e "SHOW DATABASES"
         mysql -u root -p root -e "SELECT USER, HOST FROM USER"
