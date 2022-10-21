@@ -35,20 +35,19 @@ jobs:
         # rhel8
         script: |
           pwd
-#          sudo yum -y update
-#          sudo yum install -y git
-#          git --version
-#          mkdir repository
-#          cd repository
-#          git config --global user.name 'lightcat-art'
-#          git config --global user.password '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'
-#          git clone https://github.com/lightcat-art/stock-data-analyze.git .
-#          light-cat
-#          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
-
-    - name: mysql install
-      run: |
-        pwd
+          sudo yum -y update
+          sudo yum install -y git
+          git --version
+          mkdir repository
+          cd repository
+          git config --global user.name '$GIT_USERNAME'
+          git config --global user.password '$GIT_ACCESS_TOKEN'
+          git clone https://github.com/lightcat-art/stock-data-analyze.git .
+          $GIT_USERNAME
+          $GIT_ACCESS_TOKEN
+      env:
+        GIT_USERNAME: ${{secrets.GIT_USERNAME}}
+        GIT_ACCESS_TOKEN: ${{secrets.GIT_ACCESS_TOKEN}}
 
 
 #    - name: Install Dependencies
