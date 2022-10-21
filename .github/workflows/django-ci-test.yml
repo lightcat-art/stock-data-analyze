@@ -39,12 +39,12 @@ jobs:
     - name: verify MySQL version & start MySQL
         # 아래는 실행문, cli에 입력하듯이 명령어를 작성하면 된다.
       run: |
+        # sudo apt-get install -y mysql-client
         mysql --version
-        sudo apt-get install -y mysql-client
+        cat /etc/my.cnf | grep log-err
         sudo service mysql start
 
-        cat /etc/my.cnf | grep log-err
-#        cat /var/log/mysqld.log
+        # cat /var/log/mysqld.log
 
     - name: sleep
       run: |
