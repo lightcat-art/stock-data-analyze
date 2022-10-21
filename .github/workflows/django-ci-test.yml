@@ -42,8 +42,9 @@ jobs:
         mysql --version
         sudo apt-get install -y mysql-client
         sudo service mysql start
-        sleep 10s
-        cat /var/log/mysqld.log
+
+        cat /etc/my.cnf | grep log-err
+#        cat /var/log/mysqld.log
 
     - name: sleep
       run: |
