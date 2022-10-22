@@ -41,12 +41,12 @@ jobs:
       run: |
         # sudo apt-get install -y mysql-client
         mysql --version
-
+        sudo service mysql start
         # cat /var/log/mysqld.log
 
-    - name: sleep
-      run: |
-        sleep 5s
+#    - name: sleep
+#      run: |
+#        sleep 5s
 
     - name: connect MySQL & test query
       run: |
