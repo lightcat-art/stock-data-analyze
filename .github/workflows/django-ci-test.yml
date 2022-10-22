@@ -42,8 +42,11 @@ jobs:
         mysql --version
         sudo apt-get install -y mysql-client
         sudo service mysql start
+        echo "service start complete"
         /usr/bin/mysql -u root -p root -e "USE MYSQL"
+        echo "enter use mysql complete"
         /usr/bin/mysql -u root -p root -e "SHOW DATABASES"
+        echo "enter show databases complete"
         mysql -u root -p root -e "SELECT USER, HOST FROM USER"
         mysql -u root -p root -e "GRANT ALL PRIVILEGES ON stock.* to 'stock'@'localhost'"
         mysql -u root -p root -e "SHOW GRANTS"
