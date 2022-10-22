@@ -41,7 +41,8 @@ jobs:
       run: |
         # sudo apt-get install -y mysql-client
         mysql --version
-        sudo service mysql start
+        sudo systemctl enable mysql.service
+        sudo systemctl start mysql.service
         # cat /var/log/mysqld.log
 
 #    - name: sleep
