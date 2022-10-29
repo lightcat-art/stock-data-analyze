@@ -44,8 +44,8 @@ jobs:
         sudo service mysql start
         echo "service start complete"
         echo "root" > passwd.txt
-        mysql -uroot -proot -e "use mysql;'
-        mysql -uroot -proot -e "show status;'
+        mysql -uroot -proot -e 'use mysql;'
+        mysql -uroot -proot -e 'show status;'
         use mysql;
         show status;
         select user,host from user;
