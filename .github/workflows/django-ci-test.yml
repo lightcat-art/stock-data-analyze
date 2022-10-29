@@ -41,16 +41,15 @@ jobs:
       run: |
         mysql --version
         sudo apt-get install -y mysql-client
-        mysqld_safe --skip-grant-tables &
         sudo service mysql start
         echo "service start complete"
         echo "root" > passwd.txt
-        /usr/bin/mysql -u root
+        mysql -u root -p root
         use mysql;
         show status;
         select user,host from user;
         echo "enter use mysql complete"
-        /usr/bin/mysql -u root -p root -e "SHOW DATABASES"
+        mysql -u root -p root -e "SHOW DATABASES"
         echo "enter show databases complete"
         mysql -u root -p root -e "SELECT USER, HOST FROM USER"
         mysql -u root -p root -e "GRANT ALL PRIVILEGES ON stock.* to 'stock'@'localhost'"
