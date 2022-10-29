@@ -44,7 +44,7 @@ jobs:
         sudo service mysql start
         echo "service start complete"
         echo "root" > passwd.txt
-        /usr/bin/mysql -u root
+        /usr/bin/mysql -u root --skip-password
         use mysql;
         show status;
         select user,host from user;
