@@ -23,11 +23,11 @@ jobs:
           MYSQL_DATABASE: stock
         ports: # 열어줄 포트, 8080:3306 형태로도 가능
           - 3306 # 3306:3306 으로 하면 service start 하는데 장애남.
-#        options: >-  # 서비스에 걸어줄 옵션
-#          --health-cmd="mysqladmin ping"
-#          --health-interval=10s
-#          --health-timeout=5s
-#          --health-retries=3
+        options: >-  # 서비스에 걸어줄 옵션
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
     - uses: actions/checkout@v3
