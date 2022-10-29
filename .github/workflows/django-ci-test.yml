@@ -45,6 +45,8 @@ jobs:
         echo "service start complete"
         echo "root" > passwd.txt
         /usr/bin/mysql -u root -p < passwd.txt
+        use mysql;
+        show status;
         select user,host from user;
         echo "enter use mysql complete"
         /usr/bin/mysql -u root -p root -e "SHOW DATABASES"
