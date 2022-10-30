@@ -44,10 +44,11 @@ jobs:
         sudo service mysql start
         echo "service start complete"
         mysql -uroot -proot -e 'use mysql; select user, host from user; show grants;'
-        mysql -uroot -proot -e 'grant all privileges on stock.* to 'stock'@'localhost'; flush privileges;'
+        # mysql -uroot -proot -e 'grant all privileges on stock.* to 'dhk'@'localhost'; flush privileges;'
         mysql -uroot -proot -e 'show databases;'
         # mysql -uroot -proot -e 'show status;'
         echo "mysql command complete"
+        docker ps -a
 
 #        sudo systemctl stop mysql.service
 #        sudo systemctl enable mysql.service
