@@ -1,2 +1,5 @@
 .idea
 *.pyc
+backend/build/*
+backend/dist/*
+*egg-info*
