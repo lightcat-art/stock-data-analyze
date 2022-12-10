@@ -22,7 +22,7 @@ COPY . .
 # install dependencies
 RUN pip3 install -r /home/stock/backend/requirements.txt
 
-RUN cd /home/stock/backend && python3 /home/stock/backend/manage.py makemigrations blog && python3 /home/stock/backend/manage.py migrate blog
+#RUN cd /home/stock/backend && python3 /home/stock/backend/manage.py makemigrations blog && python3 /home/stock/backend/manage.py migrate blog
 
 #COPY ./backend/dist/stock_data_analyze*.whl /root/
 #RUN pip install /root/stock_data_analyze*.whl
