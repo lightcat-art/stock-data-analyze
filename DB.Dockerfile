@@ -14,6 +14,7 @@ ENV MYSQL_ROOT_PASSWORD root
 #ENV MYSQL_ALLOW_EMPTY_PASSWORD true
 
 ADD ./mysql-init-files /docker-entrypoint-initdb.d
+#포트 명시만 해주는 용도이고 다른 기능은 없음 직접 port 설정하려면 docker-compose.yml에서 설정하거나 직접 명령어로 매핑해야함.
 EXPOSE 3306
 
 # CMD 를 사용하면 명령을 한번 수행하고 종료되는 이미지를 생성하게 됨!
