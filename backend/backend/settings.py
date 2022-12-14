@@ -12,10 +12,10 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 
 from pathlib import Path
 import os
+from os import environ
 
+# from . import mysqlSettings
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-from . import mysqlSettings
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
@@ -77,7 +77,35 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASES = mysqlSettings.DATABASES
+
+# DATABASES = mysqlSettings.DATABASES
+# export DJANGO_DATABASE='mysql-local'과 같은 형식으로 환경변수 지정하여 기동
+DATABASES = {
+    'mysql-local': {
+        'ENGINE': 'django.db.backends.mysql',   # 사용할 DB 종류
+        'NAME': 'stock',        # DB 이름
+        'USER': 'stock',        # DB 계정 이름
+        'PASSWORD': 'stock',    # DB 계정 패스워드
+        'HOST': 'localhost',    # IP
+        'PORT': '3306'          # PORT
+    },
+    'mysql-docker': {
+        'ENGINE': 'django.db.backends.mysql',  # 사용할 DB 종류
+        'NAME': 'stock',  # DB 이름
+        'USER': 'stock',  # DB 계정 이름
+        'PASSWORD': 'stock',  # DB 계정 패스워드
+        'HOST': '172.21.0.30',  # IP
+        'PORT': '3306'  # PORT
+    },
+    'sqlite3': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+default_database = environ.get('DJANGO_DATABASE', 'mysql-local')
+DATABASES['default'] = DATABASES[default_database]
+
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
