@@ -104,6 +104,7 @@ DATABASES = {
 }
 
 default_database = environ.get('DJANGO_DATABASE', 'mysql-local')
+print('database name = ',default_database)
 DATABASES['default'] = DATABASES[default_database]
 
 

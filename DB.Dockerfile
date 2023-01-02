@@ -8,11 +8,13 @@ ENV default-collation utf8_general_ci
 
 # 스키마 명, 비밀번호
 ENV MYSQL_DATABASE stock
-ENV MYSQL_ROOT_PASSWORD root
+#ENV MYSQL_ROOT_PASSWORD root
 #ENV MYSQL_USER stock
 #ENV MYSQL_PASSWORD stock
 #ENV MYSQL_ALLOW_EMPTY_PASSWORD true
+ENV MYSQL_RANDOM_ROOT_PASSWORD true
 
+# db init sql 옮기기
 ADD ./mysql-init-files /docker-entrypoint-initdb.d
 #포트 명시만 해주는 용도이고 다른 기능은 없음 직접 port 설정하려면 docker-compose.yml에서 설정하거나 직접 명령어로 매핑해야함.
 EXPOSE 3306

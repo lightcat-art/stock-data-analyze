@@ -1,6 +1,10 @@
 FROM centos:8
 # create working directory in docker
 WORKDIR /home/stock
+# setting envirionment
+ENV DJANGO_DATABASE mysql-docker
+#ENV DJANGO_DATABASE mysql-local
+
 # use appstream repository
 RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-*
 RUN sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*
@@ -22,7 +26,10 @@ COPY . .
 # install dependencies
 RUN pip3 install -r /home/stock/backend/requirements.txt
 
-#RUN cd /home/stock/backend && python3 /home/stock/backend/manage.py makemigrations blog && python3 /home/stock/backend/manage.py migrate blog
+RUN echo "python3 /home/stock/backend/manage.py makemigrations blog && python3 /home/stock/backend/manage.py migrate blog" > ./script/blog_db_init.sh
+RUN echo "python3 /home/stock/backend/manage.py makemigrations stocksimul && python3 /home/stock/backend/manage.py migrate stocksimul" > ./script/stocksimul_db_init.sh
+RUN echo "nohup python3 /home/stock/backend/manage.py runserver 0.0.0.0:8100 &" > ./script/django_server_start.sh
+RUN chmod +x *.sh
 
 #COPY ./backend/dist/stock_data_analyze*.whl /root/
 #RUN pip install /root/stock_data_analyze*.whl
