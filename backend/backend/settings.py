@@ -28,8 +28,7 @@ SECRET_KEY = 'django-insecure-30kc0n7n10f+*%cnekqfr)m8y8pnfoh)d7($2ly!rnpxg+$lln
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-# 애플리케이션을 배포할 때 PythonAnywhere의 호스트 이름과 일치하지 않으므로 추가
-ALLOWED_HOSTS = ['127.0.0.1', '.pythonanywhere.com']
+ALLOWED_HOSTS = ['127.0.0.1', '1.234.10.139','stockchartview.com', 'www.stockchartview.com']
 
 # Application definition
 
