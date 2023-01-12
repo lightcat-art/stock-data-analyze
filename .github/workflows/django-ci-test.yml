@@ -15,13 +15,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - run: mkdir ~/distfiles
-    - uses: actions/download-artifact@v2
-      needs: build
-      with:
-        name: distfiles
-        path: distfiles
-
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
@@ -46,7 +39,7 @@ jobs:
         username: ${{ secrets.CLOUD_USER }}
         password: ${{ secrets.CLOUD_PASSWD }}
         port: ${{ secrets.CLOUD_PORT }}
-        source: "distfiles/*"
+        source: "stock-data-analyze/*"
         target: ${{ secrets.TARGET_DIR }}
 
     - name: executing remote ssh commands
