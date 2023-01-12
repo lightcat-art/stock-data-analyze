@@ -54,6 +54,7 @@ jobs:
         password: ${{ secrets.CLOUD_PASSWD }}
         port: ${{ secrets.CLOUD_PORT }}
         local-dir: ./backend/
+        timeout: 120000
 
     - name: executing remote ssh commands
       uses: appleboy/ssh-action@master
