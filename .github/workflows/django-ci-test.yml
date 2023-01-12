@@ -16,7 +16,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - run: mkdir ~/distfiles
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v2
+      needs: build
       with:
         name: distfiles
         path: distfiles
