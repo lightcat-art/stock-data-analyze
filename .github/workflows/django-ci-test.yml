@@ -15,6 +15,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - run: mkdir ~/distfiles
+    - uses: actions/download-artifact@v2
+      with:
+        name: distfiles
+        path: distfiles
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
@@ -39,8 +45,8 @@ jobs:
         username: ${{ secrets.CLOUD_USER }}
         password: ${{ secrets.CLOUD_PASSWD }}
         port: ${{ secrets.CLOUD_PORT }}
-        source: "stock-data-analyze/backend"
-        target: "/home/lightcat/"
+        source: "distfiles/*"
+        target: ${{ secrets.TARGET_DIR }}
 
     - name: executing remote ssh commands
       uses: appleboy/ssh-action@master
@@ -56,10 +62,10 @@ jobs:
 #          docker exec -it stock-data-analyze-web /bin/bash
 #          ls -al
 
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r backend/requirements.txt
-    - name: Run Tests
-      run: |
-        python -V
+#    - name: Install Dependencies
+#      run: |
+#        python -m pip install --upgrade pip
+#        pip install -r backend/requirements.txt
+#    - name: Run Tests
+#      run: |
+#        python -V
