@@ -47,12 +47,12 @@ jobs:
 #        source: "stock-data-analyze/*"
 #        target: ${{ secrets.TARGET_DIR }}
     - name: Deploy
-      uses: SamKirkland/FTP-Deploy-Action@3.1.1
+      uses: SamKirkland/FTP-Deploy-Action@4.3.3
       with:
-        ftp-server: ${{ secrets.CLOUD_IP }}
-        ftp-username: ${{ secrets.CLOUD_USER }}
-        ftp-password: ${{ secrets.CLOUD_PASSWD }}
-        ftp-port: ${{ secrets.CLOUD_PORT }}
+        server: ${{ secrets.CLOUD_IP }}
+        username: ${{ secrets.CLOUD_USER }}
+        password: ${{ secrets.CLOUD_PASSWD }}
+        port: ${{ secrets.CLOUD_PORT }}
         local-dir: .
 
     - name: executing remote ssh commands
