@@ -41,15 +41,13 @@ jobs:
 #        port: ${{ secrets.CLOUD_PORT }}
 #        source: "stock-data-analyze/*"
 #        target: ${{ secrets.TARGET_DIR }}
-    - name: copy file
-        uses: nogsantos/scp-deploy@master
-        with:
-          src: ./stock-data-analyze/*
-          remote: ${{ secrets.TARGET_DIR }}
-          host: ${{ secrets.CLOUD_IP }}
-          port: ${{ secrets.CLOUD_PORT }}
-          user: ${{ secrets.CLOUD_USER }}
-          key: ${{ secrets.CLOUD_PASSWD }}
+    - name: Deploy
+      uses: SamKirkland/FTP-Deploy-Action@3.1.1
+      with:
+        ftp-server: ${{ secrets.CLOUD_IP }}
+        ftp-username: ${{ secrets.CLOUD_USER }}
+        ftp-password: ${{ secrets.CLOUD_PASSWD }}
+        local-dir: ./*
 
     - name: executing remote ssh commands
       uses: appleboy/ssh-action@master
