@@ -32,15 +32,24 @@ jobs:
         script: |
           ls -al
 
-    - name: copy file via ssh password
-      uses: appleboy/scp-action@master
-      with:
-        host: ${{ secrets.CLOUD_IP }}
-        username: ${{ secrets.CLOUD_USER }}
-        password: ${{ secrets.CLOUD_PASSWD }}
-        port: ${{ secrets.CLOUD_PORT }}
-        source: "stock-data-analyze/*"
-        target: ${{ secrets.TARGET_DIR }}
+#    - name: copy file via ssh password
+#      uses: appleboy/scp-action@master
+#      with:
+#        host: ${{ secrets.CLOUD_IP }}
+#        username: ${{ secrets.CLOUD_USER }}
+#        password: ${{ secrets.CLOUD_PASSWD }}
+#        port: ${{ secrets.CLOUD_PORT }}
+#        source: "stock-data-analyze/*"
+#        target: ${{ secrets.TARGET_DIR }}
+    - name: copy file
+        uses: nogsantos/scp-deploy@master
+        with:
+          src: ./stock-data-analyze/*
+          remote: ${{ secrets.TARGET_DIR }}
+          host: ${{ secrets.CLOUD_IP }}
+          port: ${{ secrets.CLOUD_PORT }}
+          user: ${{ secrets.CLOUD_USER }}
+          key: ${{ secrets.CLOUD_PASSWD }}
 
     - name: executing remote ssh commands
       uses: appleboy/ssh-action@master
