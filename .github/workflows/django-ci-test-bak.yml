@@ -1,0 +1,128 @@
+name: Django CI Test
+
+on:
+  push:
+    branches: [""]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [3.8]
+
+    services: # 서비스할 목록들 (ex. Redis, Postgresql ...)
+      mysql: # 사용할 서비스 명
+        image: mysql:8.0  # 사용할 서비스의 이미지(도커 개념 기반)
+        env: # 사용할 서비스의 환경설정
+          MYSQL_USER: dhk
+          MYSQL_PASSWORD: dhk
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: stock
+        ports: # 열어줄 포트, 8080:3306 형태로도 가능
+          - 3306 # 3306:3306 으로 하면 service start 하는데 장애남.
+        options: >-  # 서비스에 걸어줄 옵션
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: verify MySQL version & start MySQL
+        # 아래는 실행문, cli에 입력하듯이 명령어를 작성하면 된다.
+      run: |
+        mysql --version
+        sudo apt-get install -y mysql-client
+        sudo service mysql start
+        echo "service start complete"
+        mysql -uroot -proot -e 'use mysql; select user, host from user; show grants;'
+        # mysql -uroot -proot -e 'grant all privileges on stock.* to 'dhk'@'localhost'; flush privileges;'
+        mysql -uroot -proot -e 'show databases;'
+        # mysql -uroot -proot -e 'show status;'
+        echo "mysql command complete"
+        docker ps -a
+
+#        sudo systemctl stop mysql.service
+#        sudo systemctl enable mysql.service
+#        sudo systemctl restart mysql.service
+        # cat /var/log/mysqld.log
+
+#    - name: sleep
+#      run: |
+#        sleep 5s
+
+    - name: connect MySQL & test query
+      run: |
+        mysql -u root -p root -e "USE MYSQL"
+        mysql -u root -p root -e "SHOW DATABASES"
+        mysql -u root -p root -e "SELECT USER, HOST FROM USER"
+        mysql -u root -p root -e "GRANT ALL PRIVILEGES ON stock.* to 'stock'@'localhost'"
+        mysql -u root -p root -e "SHOW GRANTS"
+
+      env: # 사용할 서비스의 환경설정
+        MYSQL_USER: dhk
+        MYSQL_PASSWORD: dhk
+        MYSQL_ROOT_PASSWORD: root
+        MYSQL_DATABASE: stock
+
+    - name: echo test
+      run: |
+        pwd
+        echo "echo_test" > ../echo.test
+        cat ../echo.test
+
+    - name: build
+      run: |
+
+
+
+    - name: executing remote ssh commands
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.AWS_IP }}
+        username: ${{ secrets.AWS_USER }}
+        key: ${{ secrets.AWS_HOME_PRIVATE_KEY }}
+        port: ${{ secrets.AWS_PORT }}
+        # rhel8
+        script: |
+          pwd
+#          sudo dnf module -y install python38
+#          alias python=python3
+#          alias pip=pip3
+#          sudo pip install virtualenv
+#          virtualenv stock-data-analyze --python=python3.8
+#          source stock-data-analyze/bin/activate
+#          pip install --upgrade pip
+#          pip install stock_data_analyze-1.0.1-py3-none-any.whl
+
+
+#          sudo yum -y update
+#          sudo yum install -y git
+#          git --version
+#          mkdir repository
+#          cd repository
+#          git config --global user.name '$GIT_USERNAME'
+#          git config --global user.password '$GIT_ACCESS_TOKEN'
+#          git clone https://github.com/lightcat-art/stock-data-analyze.git .
+#          ${{secrets.GIT_USERNAME}}
+#          ${{secrets.GIT_ACCESS_TOKEN}}
+#      env:
+#        GIT_USERNAME: ${{secrets.GIT_USERNAME}}
+#        GIT_ACCESS_TOKEN: ${{secrets.GIT_ACCESS_TOKEN}}
+
+
+#    - name: Install Dependencies
+#      run: |
+#        python -m pip install --upgrade pip
+#        pip install -r backend/requirements.txt
+#    - name: Run Tests
+#      run: |
+#        python -V
