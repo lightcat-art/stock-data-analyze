@@ -52,7 +52,7 @@ jobs:
         ftp-server: ${{ secrets.CLOUD_IP }}
         ftp-username: ${{ secrets.CLOUD_USER }}
         ftp-password: ${{ secrets.CLOUD_PASSWD }}
-        local-dir: ./stock-data-analyze
+        local-dir: .
 
     - name: executing remote ssh commands
       uses: appleboy/ssh-action@master
