@@ -2,7 +2,7 @@ name: Django CI Test
 
 on:
   push:
-    branches: [""]
+    branches: ["ci-test"]
 
 jobs:
   build:
