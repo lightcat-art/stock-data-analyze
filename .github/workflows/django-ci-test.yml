@@ -53,7 +53,7 @@ jobs:
         username: ${{ secrets.CLOUD_USER }}
         password: ${{ secrets.CLOUD_PASSWD }}
         port: ${{ secrets.CLOUD_PORT }}
-        local-dir: .
+        local-dir: ./backend
 
     - name: executing remote ssh commands
       uses: appleboy/ssh-action@master
