@@ -52,6 +52,7 @@ jobs:
         ftp-server: ${{ secrets.CLOUD_IP }}
         ftp-username: ${{ secrets.CLOUD_USER }}
         ftp-password: ${{ secrets.CLOUD_PASSWD }}
+        ftp-port: ${{ secrets.CLOUD_PORT }}
         local-dir: .
 
     - name: executing remote ssh commands
