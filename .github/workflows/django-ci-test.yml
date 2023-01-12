@@ -32,6 +32,11 @@ jobs:
         script: |
           ls -al
 
+    - name: check pulled git repository path info
+      run: |
+        pwd
+        ls -al
+
 #    - name: copy file via ssh password
 #      uses: appleboy/scp-action@master
 #      with:
@@ -47,7 +52,7 @@ jobs:
         ftp-server: ${{ secrets.CLOUD_IP }}
         ftp-username: ${{ secrets.CLOUD_USER }}
         ftp-password: ${{ secrets.CLOUD_PASSWD }}
-        local-dir: ./*
+        local-dir: ./stock-data-analyze
 
     - name: executing remote ssh commands
       uses: appleboy/ssh-action@master
