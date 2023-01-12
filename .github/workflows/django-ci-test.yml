@@ -49,12 +49,13 @@ jobs:
     - name: Deploy
       uses: SamKirkland/FTP-Deploy-Action@4.3.3
       with:
+        timeout: 120000
+        protocol: ftps
         server: ${{ secrets.CLOUD_IP }}
         username: ${{ secrets.CLOUD_USER }}
         password: ${{ secrets.CLOUD_PASSWD }}
         port: ${{ secrets.CLOUD_PORT }}
         local-dir: ./backend/
-        timeout: 120000
 
     - name: executing remote ssh commands
       uses: appleboy/ssh-action@master
