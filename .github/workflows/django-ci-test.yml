@@ -50,7 +50,7 @@ jobs:
       uses: SamKirkland/FTP-Deploy-Action@4.3.3
       with:
         timeout: 120000
-        protocol: ftps
+        protocol: sftp
         server: ${{ secrets.CLOUD_IP }}
         username: ${{ secrets.CLOUD_USER }}
         password: ${{ secrets.CLOUD_PASSWD }}
