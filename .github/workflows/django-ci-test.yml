@@ -2,7 +2,7 @@ name: Django CI Test
 
 on:
   push:
-    branches: ["ci-test"]
+    branches: [""]
 
 jobs:
   build:
@@ -54,7 +54,7 @@ jobs:
         server: ${{ secrets.CLOUD_IP }}
         port: ${{ secrets.CLOUD_PORT }}
         password: ${{ secrets.CLOUD_PASSWD }}
-        local_path: '.'
+        local_path: '../stock-data-analyze'
         remote_path: ${{ secrets.TARGET_DIR }}
         sftp_only: true
 
