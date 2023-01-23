@@ -85,13 +85,14 @@
 
                 var xr_min = xrange[0],
                     xr_max = xrange[1],
-                    layout_change = {};
+                    layout_change = {},
+                    x_relayout = false;
 
 <!--                console.log('xr_min=',xr_min);-->
 <!--                console.log('xr_max=',xr_max);-->
                 if (graphDiv.data) {
                     var trace = graphDiv.data[0];  // 1st trace
-<!--                    console.log('trace = ',trace);-->
+                    console.log('trace = ',trace);
                     vi_min = null;
                     vi_max = null;
                     if (trace.x) {
@@ -110,6 +111,9 @@
 <!--                        console.log('trace.x.length =', trace.x.length);-->
                         vi_min = Math.ceil(xr_min);
                         vi_max = Math.floor(xr_max);
+                        if (vi_min%3==0 || vi_max%3==0) {
+                            x_relayout = true
+                        }
                         // Get min-max y values between indexes
                         for (var t = 0; t < graphDiv.data.length; t++) {
                             var y_min = Number.MAX_VALUE,
@@ -126,7 +130,7 @@
                     }
                 }
                 const time6 = Date.now();
-                if (layout_change) {
+                if (layout_change && x_relayout) {
                     Plotly.relayout(graphDiv, layout_change);
                     setTimeout(function () {
                         relayout_semaphore = false;
