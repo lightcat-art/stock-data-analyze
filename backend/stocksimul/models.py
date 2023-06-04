@@ -33,8 +33,8 @@ class StockEvent(models.Model):
 
 class StockSimulResult(models.Model):
     # 데이터 누락을 방지하기 위해 fk 설정
-    stock_simul_param = models.ForeignKey("StockSimulParam", on_delete=models.CASCADE)
-    stock_event = models.ForeignKey("StockEvent", on_delete=models.CASCADE)
+    stock_simul_param_id = models.IntegerField(default=-1)
+    stock_event_id = models.IntegerField(default=-1)
     max_rate = models.FloatField(default=0)
     max_days_taken = models.IntegerField(default=0)
     min_rate = models.FloatField(default=0)
@@ -45,7 +45,7 @@ class StockPrice(models.Model):
     # 기본적으로 django가 auto-increment id를 생성하기 때문에, 명시적으로 생성할 pk에는 primary_key 옵션을 넣어주어야 한다.
     stock_price_id = models.BigAutoField(primary_key=True)
     # 데이터 누락을 방지하기 위해 fk 설정
-    stock_event = models.ForeignKey("StockEvent", on_delete=models.CASCADE)
+    stock_event_id = models.IntegerField(default=-1)
     date = models.DateField()
     open = models.IntegerField(default=-1, null=True)
     close = models.IntegerField(default=-1, null=True)
@@ -64,7 +64,7 @@ class StockPrice(models.Model):
 class StockInfoUpdateStatus(models.Model):
     stock_info_update_status_id = models.AutoField(primary_key=True)
     table_type = models.CharField(max_length=1)  # 'P' : 주가테이블, 'E' : 종목코드테이블
-    stock_event = models.ForeignKey("StockEvent", on_delete=models.CASCADE, null=True)
+    stock_event_id = models.IntegerField(default=-1)
     
     # 'DI' : Delete&Insert all row data , # 'UD': update additional row
     update_type = models.CharField(max_length=2, default='UD')
