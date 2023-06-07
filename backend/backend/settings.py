@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'blog',  # 앱을 사용한다는 것을 django에게 알려주기
-    'stocksimul',
+    'stocksimul', # 앱을 사용한다는 것을 django에게 알려주기
+    'django_apscheduler',
 ]
 
 MIDDLEWARE = [
@@ -76,6 +77,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
+APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"
+
+APSCHEDULER_RUN_NOW_TIMEOUT = 25 # default is 25s
+
+SCHEDULER_DEFAULT = True # apps.py 참고
 
 # DATABASES = mysqlSettings.DATABASES
 # export DJANGO_DATABASE='mysql-local'과 같은 형식으로 환경변수 지정하여 기동

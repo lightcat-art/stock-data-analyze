@@ -221,7 +221,8 @@ def update_stock_price(event_info):
         price_info_status_model.mod_dt = datetime.date.today()
         price_info_status_model.save()
         info_update_yn = True
-    # 해당 종목에 대해서 데이터 DELETE를 하고 다시 INSERT 해야하느 경우
+    # 해당 종목에 대해서 데이터 DELETE를 하고 다시 INSERT 해야하느 경우 - 앱내 DI로 업데이트하는 경우는 없고, 수동으로 DI로 변경필요.
+    # 근데 UD은 업데이트하고 난 상태를 말하지만, DI는 업데이트 되어야하는 상태를 말하므로 혼동이 올수 있음... 사용다시 하게된다면 개선 필요.
     elif price_info_status_qryset.first().update_type == 'DI':
         print('update_stock_price : delete&insert for {}'.format(event_info.event_name))
         update_start_dt = stock_price_init_start_dt
