@@ -44,7 +44,6 @@ class StockSimulResult(models.Model):
 class StockPrice(models.Model):
     # 기본적으로 django가 auto-increment id를 생성하기 때문에, 명시적으로 생성할 pk에는 primary_key 옵션을 넣어주어야 한다.
     stock_price_id = models.BigAutoField(primary_key=True)
-    # 데이터 누락을 방지하기 위해 fk 설정
     stock_event_id = models.IntegerField(default=-1)
     date = models.DateField()
     open = models.IntegerField(default=-1, null=True)
