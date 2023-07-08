@@ -2,17 +2,18 @@ from apscheduler.schedulers.background import BackgroundScheduler, BlockingSched
 from apscheduler.triggers.cron import CronTrigger
 from django.conf import settings
 from django_apscheduler.jobstores import DjangoJobStore
-from .stock_data_manage import stock_batch
+from .stock_data_manage import manage_event_init, manage_event_daily
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 import traceback
+from datetime import timedelta, datetime
 
 
 class operator:
     def __init__(self):
         print('init operator')
-        self.job = None
         self.scheduler = BackgroundScheduler(timezone=settings.TIME_ZONE)
         self.scheduler.add_jobstore(DjangoJobStore())
+
     def start(self):
         print('register job start')
         # jobstores = {
@@ -28,7 +29,14 @@ class operator:
         # }
         # scheduler = BackgroundScheduler(jobstores=jobstores, job_defaults=job_defaults, executors=executors, timezone=settings.TIME_ZONE)
         try:
-            self.job = self.scheduler.add_job(stock_batch, 'cron', hour=11, minute=47, id='stock_batch', replace_existing=True)
+            today_org = datetime.now()
+            # The 'date' trigger and datetime.now() as run_date are implicit
+            self.scheduler.add_job(manage_event_init, 'date', run_date=today_org+timedelta(seconds=10),
+                                              id='manage_event_init', replace_existing=True)
+
+            self.scheduler.add_job(manage_event_daily, 'cron', hour=(today_org+timedelta(minutes=2)).hour,
+                                              minute=(today_org+timedelta(minutes=2)).minute, id='manage_event_daily',
+                                              replace_existing=True)
 
             self.scheduler.start()
         except Exception as e:
