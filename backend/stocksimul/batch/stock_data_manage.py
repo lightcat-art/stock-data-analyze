@@ -19,7 +19,7 @@ ps.
 * 장 시작 전에는 시가,고가,종가,저가 가 모두 0으로 조회됨.
 '''
 first = False # 첫 insert 진행중 여부
-insert_all = True # 첫 insert 강제 실행 조작 여부
+insert_all = False # 첫 insert 강제 실행 조작 여부
 
 
 # def stock_batch():
@@ -108,6 +108,8 @@ def manage_event_init():
         print('insert market data time = ', insert_market_data_time_taken)
         print('manage_event_init end')
         first = False
+    else:
+        print('skip init_manage_event.')
 
 
 def manage_event_daily():
@@ -131,6 +133,13 @@ def manage_event_daily():
             price_info_df = stock.get_market_ohlcv_by_ticker(date=today, market='ALL')
             # 시가,종가,고가,저가 가 모두 0이면 휴일으로 간주하고 스킵.
             holiday = (price_info_df[['시가', '고가', '저가', '종가']] == 0).all(axis=None)
+            # stockprice 테이블 업데이트 - 신규/기존 종목
+            # price_info_df = price_info.reset_index() # 종목코드를 컬럼으로 빼기.
+            price_info_df.rename(
+                columns={'티커': 'event_code', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
+                         '저가': 'low',
+                         '거래대금': 'value', '등락률': 'up_down_rate'}, inplace=True)
+            price_info_df['date'] = datetime.now()
             if not holiday:
                 new_event_result = {}
                 del_event_result = []
@@ -180,20 +189,13 @@ def manage_event_daily():
                         entry = StockEvent(**item)
                         entry.save()
 
-                # stockprice 테이블 업데이트 - 신규/기존 종목
-                # price_info_df = price_info.reset_index() # 종목코드를 컬럼으로 빼기.
-                price_info_df.rename(
-                    columns={'티커': 'event_code', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
-                             '저가': 'low',
-                             '거래대금': 'value', '등락률': 'up_down_rate'}, inplace=True)
-                price_info_df['date'] = datetime.now()
-
                 with transaction.atomic():
                     for k, v in price_info_df.to_dict('index').items():
-                        event_status = StockInfoUpdateStatus.objects.filter(event_code=k)
                         event_info = StockEvent.objects.filter(event_code=k)
+                        event_status = StockInfoUpdateStatus.objects.filter(
+                            stock_event_id=event_info.first().stock_event_id)
 
-                        if event_status.mod_dt.strftime('%Y%m%d') == today:
+                        if event_status.first().mod_dt.strftime('%Y%m%d') == today:
                             # 장 끝난 시점에 하루에 한번만 업데이트하는거면 스킵하고, 하루에 여러번 업데이트하는거면 해당날짜의 주가 계속 받아와서 업데이트해야함.
                             # 하루에 한번 실행이라도 처음 insert에 장중가가 반영될 경우를 대비해 업데이트하는게 좋은듯..?
                             today_event_info = StockPrice.objects.filter(event_code=k, date=today)
@@ -206,9 +208,9 @@ def manage_event_daily():
                             today_event_info.up_down_rate = v['up_down_rate']
                             today_event_info.update()
                             continue
-                        elif today_org - timedelta(days=1) > event_status.mod_dt: # 실행날짜를 제외하고 1일이상 누락된 경우
+                        elif (today_org - timedelta(days=1)).date() > event_status.first().mod_dt:  # 실행날짜를 제외하고 1일이상 누락된 경우
                             # 업데이트 빠진 기간 insert
-                            fromdate = (event_status.mod_dt + timedelta(days=1)).strftime('%Y%m%d')
+                            fromdate = (event_status.first().mod_dt + timedelta(days=1)).strftime('%Y%m%d')
                             todate = (today_org - timedelta(days=1)).strftime('%Y%m%d')
                             omit_price_info_df = stock.get_market_ohlcv_by_date(fromdate=fromdate, todate=todate,
                                                                            ticker=k)
@@ -238,10 +240,51 @@ def manage_event_daily():
                             event_status_insert = StockInfoUpdateStatus(**status_dict)
                             event_status_insert.save()
                         else:
-                            event_status.mod_dt = datetime.now()
-                            event_status.update()
+                            event_status.first().mod_dt = datetime.now()
+                            event_status.first().save()
             else:
-                print('it''s holiday. skip daily batch.')
+                print('it''s holiday. only update omitted event information about the last period')
+                with transaction.atomic():
+                    for k, v in price_info_df.to_dict('index').items():
+                        event_info = StockEvent.objects.filter(event_code=k)
+                        event_status = StockInfoUpdateStatus.objects.filter(
+                            stock_event_id=event_info.first().stock_event_id)
+
+                        if (today_org - timedelta(days=1)).date() > event_status.first().mod_dt:  # 실행날짜를 제외하고 1일이상 누락된 경우
+                            # 업데이트 빠진 기간 insert
+                            fromdate = (event_status.first().mod_dt + timedelta(days=1)).strftime('%Y%m%d')
+                            todate = (today_org - timedelta(days=1)).strftime('%Y%m%d')
+                            omit_price_info_df = stock.get_market_ohlcv_by_date(fromdate=fromdate, todate=todate,
+                                                                                ticker=k)
+                            if len(omit_price_info_df) != 0:  # 휴일에 의한 업데이트 시간차 발생 경우 제외
+                                omit_price_info_df = omit_price_info_df.reset_index()
+                                omit_price_info_df.rename(
+                                    columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
+                                             '저가': 'low',
+                                             '거래대금': 'value', '등락률': 'up_down_rate'},
+                                    inplace=True)
+                                with transaction.atomic():
+                                    for priceitem in omit_price_info_df.to_dict('records'):
+                                        # if StockPrice.objects.filter(date=item['date']).filter(event_code=event_info.event_code).count() < 1:
+                                        # 똑같은 데이터는 중복으로 insert해도 알아서 중복체크를 django에서 해준다..?
+                                        entry = StockPrice(**priceitem)
+                                        entry.stock_event_id = event_info.first().stock_event_id
+                                        entry.save()
+                            print('event code ', k, ' : updating omitted informations complete')
+
+                        event_status = StockInfoUpdateStatus.objects.filter(
+                            stock_event_id=event_info.first().stock_event_id)
+                        if len(event_status) == 0:
+                            status_dict = {'table_type': 'P', 'mod_dt': datetime.now(), 'reg_dt': datetime.now(),
+                                           'stock_event_id': event_info.first().stock_event_id}
+                            event_status_insert = StockInfoUpdateStatus(**status_dict)
+                            event_status_insert.save()
+                        else:
+                            for item in event_status:
+                                item.mod_dt = datetime.now()
+                                item.save()
+                        time.sleep(0.3)
+
         else:
             print('first batch executing, so skip daily batch')
     print('manage_event_daily end')

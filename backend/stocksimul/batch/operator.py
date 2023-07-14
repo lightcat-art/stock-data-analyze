@@ -34,8 +34,10 @@ class operator:
             self.scheduler.add_job(manage_event_init, 'date', run_date=today_org+timedelta(seconds=10),
                                               id='manage_event_init', replace_existing=True)
 
-            self.scheduler.add_job(manage_event_daily, 'cron', hour=(today_org+timedelta(minutes=2)).hour,
-                                              minute=(today_org+timedelta(minutes=2)).minute, id='manage_event_daily',
+            self.scheduler.add_job(manage_event_daily, 'cron', hour=(today_org+timedelta(minutes=1)).hour,
+                                              minute=(today_org+timedelta(minutes=1)).minute,
+                                              second=(today_org+timedelta(minutes=1)).second,
+                                              id='manage_event_daily',
                                               replace_existing=True)
 
             self.scheduler.start()
