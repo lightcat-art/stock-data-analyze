@@ -57,7 +57,8 @@ class StockPrice(models.Model):
     objects = models.Manager()
 
     class Meta:
-        index_together = [("stock_event_id", "date"), ]
+        # index_together = [("stock_event_id", "date"), ]
+        indexes = [models.Index(fields=['stock_event_id'])]
 
 
 class StockInfoUpdateStatus(models.Model):
