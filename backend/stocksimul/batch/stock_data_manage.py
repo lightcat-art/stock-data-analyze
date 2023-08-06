@@ -209,7 +209,7 @@ def manage_event_daily():
                             today_event_info.update()
                             continue
                         elif (today_org - timedelta(days=1)).date() > event_status.first().mod_dt:  # 실행날짜를 제외하고 1일이상 누락된 경우
-                            # 업데이트 빠진 기간 insert
+                            # 실행날짜를 제외한 업데이트 빠진 기간 insert
                             fromdate = (event_status.first().mod_dt + timedelta(days=1)).strftime('%Y%m%d')
                             todate = (today_org - timedelta(days=1)).strftime('%Y%m%d')
                             omit_price_info_df = stock.get_market_ohlcv_by_date(fromdate=fromdate, todate=todate,
@@ -223,14 +223,16 @@ def manage_event_daily():
                                     inplace=True)
                                 with transaction.atomic():
                                     for priceitem in omit_price_info_df.to_dict('records'):
-                                        # if StockPrice.objects.filter(date=item['date']).filter(event_code=event_info.event_code).count() < 1:
-                                        entry = StockPrice(**priceitem)
-                                        entry.stock_event_id = event_info.first().stock_event_id
-                                        entry.save()
+                                        if priceitem['open'] == '0' and priceitem['high'] == '0' and priceitem['low'] == '0':  # 종목이 비활성화된것으로 간주
+                                            # if StockPrice.objects.filter(date=item['date']).filter(event_code=event_info.event_code).count() < 1:
+                                            entry = StockPrice(**priceitem)
+                                            entry.stock_event_id = event_info.first().stock_event_id
+                                            entry.save()
 
-                        entry = StockPrice(**v)
-                        entry.stock_event_id = event_info.first().stock_event_id
-                        entry.save()
+                        if v['open'] == '0' and v['high'] == '0' and v['low'] == '0':  # 종목이 비활성화된것으로 간주
+                            entry = StockPrice(**v)
+                            entry.stock_event_id = event_info.first().stock_event_id
+                            entry.save()
 
                         event_status = StockInfoUpdateStatus.objects.filter(
                             stock_event_id=event_info.first().stock_event_id)
@@ -267,9 +269,10 @@ def manage_event_daily():
                                     for priceitem in omit_price_info_df.to_dict('records'):
                                         # if StockPrice.objects.filter(date=item['date']).filter(event_code=event_info.event_code).count() < 1:
                                         # 똑같은 데이터는 중복으로 insert해도 알아서 중복체크를 django에서 해준다..?
-                                        entry = StockPrice(**priceitem)
-                                        entry.stock_event_id = event_info.first().stock_event_id
-                                        entry.save()
+                                        if priceitem['open'] == '0' and priceitem['high'] == '0' and priceitem['low'] == '0':  # 종목이 비활성화된것으로 간주
+                                            entry = StockPrice(**priceitem)
+                                            entry.stock_event_id = event_info.first().stock_event_id
+                                            entry.save()
                             print('event code ', k, ' : updating omitted informations complete')
 
                         event_status = StockInfoUpdateStatus.objects.filter(
