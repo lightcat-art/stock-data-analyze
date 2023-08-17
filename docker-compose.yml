@@ -29,10 +29,6 @@ services:
       dockerfile: App.Dockerfile
     command: >
       sh -c "cd /home/stock/backend &&
-#             python3 /home/stock/backend/manage.py makemigrations blog &&
-#             python3 /home/stock/backend/manage.py migrate blog &&
-#             python3 /home/stock/backend/manage.py makemigrations stocksimul &&
-#             python3 /home/stock/backend/manage.py migrate stocksimul &&
              python3 /home/stock/backend/manage.py makemigrations &&
              python3 /home/stock/backend/manage.py migrate &&
              python3 /home/stock/backend/manage.py runserver 0.0.0.0:8100"

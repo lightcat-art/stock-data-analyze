@@ -4,6 +4,7 @@ from pykrx import stock
 from datetime import timedelta, datetime
 from django.db import transaction
 import time
+from ..config.stockConfig import INSERT_ALL
 
 '''
 1. api 통신을 통해 현재 마켓에 등록된 종목정보를 모두 받아온다.
@@ -19,9 +20,7 @@ ps.
 * 장 시작 전에는 시가,고가,종가,저가 가 모두 0으로 조회됨.
 '''
 first = False # 첫 insert 진행중 여부
-insert_all = True # 첫 insert 강제 실행 조작 여부
-
-
+insert_all = INSERT_ALL
 # def stock_batch():
 #     print('stock_batch start')
 #     manage_event_all()
