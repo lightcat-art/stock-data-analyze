@@ -3,7 +3,7 @@ from django.utils import timezone
 
 
 # Model을 정의함으로써 장고는 Post메소드가 데이터베이스에 저장되어야 한다고 알게됨.
-class StockSimulParam(models.Model):
+class SimulParam(models.Model):
     # event_choices = (('삼성전자','삼성전자'),('삼성생명','삼성생명'))
     # event_name = models.CharField(max_length=200, choices=event_choices)
     # 글자수가 제한된 텍스트 정의 ( 글 제목같은 짧은 문자열)
@@ -17,7 +17,7 @@ class StockSimulParam(models.Model):
         return self.event_name
 
 
-class StockEvent(models.Model):
+class EventInfo(models.Model):
     stock_event_id = models.BigAutoField(primary_key=True)
     event_code = models.CharField(max_length=10)
     event_name = models.CharField(max_length=200)
@@ -31,7 +31,7 @@ class StockEvent(models.Model):
     objects = models.Manager()
 
 
-class StockSimulResult(models.Model):
+class SimulResult(models.Model):
     # 데이터 누락을 방지하기 위해 fk 설정
     stock_simul_param_id = models.IntegerField(default=-1)
     stock_event_id = models.IntegerField(default=-1)
@@ -41,7 +41,7 @@ class StockSimulResult(models.Model):
     min_days_taken = models.IntegerField(default=0)
 
 
-class StockPrice(models.Model):
+class PriceInfo(models.Model):
     # 기본적으로 django가 auto-increment id를 생성하기 때문에, 명시적으로 생성할 pk에는 primary_key 옵션을 넣어주어야 한다.
     stock_price_id = models.BigAutoField(primary_key=True)
     stock_event_id = models.IntegerField(default=-1)
@@ -61,7 +61,7 @@ class StockPrice(models.Model):
         indexes = [models.Index(fields=['stock_event_id'])]
 
 
-class StockInfoUpdateStatus(models.Model):
+class InfoUpdateStatus(models.Model):
     stock_info_update_status_id = models.AutoField(primary_key=True)
     table_type = models.CharField(max_length=1)  # 'P' : 주가테이블, 'E' : 종목코드테이블
     stock_event_id = models.IntegerField(default=-1)

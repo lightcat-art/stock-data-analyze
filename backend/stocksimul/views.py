@@ -12,13 +12,13 @@ import plotly.graph_objects as go
 
 from .config import stockConfig
 from .forms import StockSimulParamForm
-from .models import StockPrice, StockInfoUpdateStatus, StockEvent, StockSimulParam
+from .models import PriceInfo, InfoUpdateStatus, EventInfo, SimulParam
 
 stock_price_init_start_dt = '2000-01-01'
 
 
 def stock_simul_param(request):
-    event_list = StockEvent.objects.all
+    event_list = EventInfo.objects.all
     # event_list = (('삼성전자','삼성전자'),('삼성생명','삼성생명'))
     # print('event_list = ',event_list)
     # if request.method == "POST":
@@ -52,8 +52,8 @@ def stock_simul_param(request):
 
             update_event_info(start_date_str)
             try:
-                event_info = StockEvent.objects.get(event_name=event_name)
-            except StockEvent.DoesNotExist as e:
+                event_info = EventInfo.objects.get(event_name=event_name)
+            except EventInfo.DoesNotExist as e:
                 # render_to_response method is deprecated.
                 return render(request, 'stocksimul/error_msg.html', {'error_type': 'MNE',
                                                                      'event_name': event_name, 'exception': e})
@@ -82,7 +82,7 @@ def render_stock_simul_result(request, event_name, start_date_str, end_date_str)
 
 
 def stock_simul_result(request, pk):
-    simul_param = get_object_or_404(StockSimulParam, pk=pk)
+    simul_param = get_object_or_404(SimulParam, pk=pk)
     print('input param : start_date = {}'.format(simul_param.start_date))
     print('input param : days = {}'.format(simul_param.days))
     print('input param : event_name = {}'.format(simul_param.event_name))
@@ -96,8 +96,8 @@ def stock_simul_result(request, pk):
     update_event_info(start_date_str)
 
     try:
-        event_info = StockEvent.objects.get(event_name=event_name)
-    except StockEvent.DoesNotExist as e:
+        event_info = EventInfo.objects.get(event_name=event_name)
+    except EventInfo.DoesNotExist as e:
         # render_to_response method is deprecated.
         return render(request, 'stocksimul/error_msg.html', {'error_type': 'MNE',
                                                              'event_name': event_name, 'exception': e})
@@ -159,10 +159,10 @@ def ajax_plotly_chart_data(request):
     event_name = request.GET.get('event_name')
     start_date_str = request.GET.get('start_date_str')
     end_date_str = request.GET.get('end_date_str')
-    event_info = get_object_or_404(StockEvent, event_name=event_name)
+    event_info = get_object_or_404(EventInfo, event_name=event_name)
     simul_start_date = datetime.datetime.strptime(start_date_str, '%Y%m%d')
     simul_end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d')
-    stocks = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id) \
+    stocks = PriceInfo.objects.filter(stock_event_id=event_info.stock_event_id) \
         .filter(date__gte=simul_start_date, date__lte=simul_end_date).order_by('date')
 
     # data = {'whole': [[123124124, 2324, 2323, 2323, 2323, 2323]]}
@@ -195,7 +195,7 @@ def update_stock_price(event_info):
     '''
 
     today = datetime.datetime.now().strftime('%Y%m%d')
-    price_info_status_qryset = StockInfoUpdateStatus.objects.filter(table_type='P') \
+    price_info_status_qryset = InfoUpdateStatus.objects.filter(table_type='P') \
         .filter(stock_event_id=event_info.stock_event_id)
     # price_info_status = StockInfoUpdateStatus.objects.get(
     #     Q(table_type='P') & Q(stock_event_id=event_info.stock_event_id))
@@ -208,7 +208,7 @@ def update_stock_price(event_info):
         update_start_dt = stock_price_init_start_dt
         status_dict = {'table_type': 'P', 'mod_dt': datetime.date.today(), 'reg_dt': datetime.date.today(),
                        'stock_event_id': event_info.stock_event_id}
-        price_info_status_model = StockInfoUpdateStatus(**status_dict)
+        price_info_status_model = InfoUpdateStatus(**status_dict)
         price_info_status_model.save()
         info_none_yn = True
     # 이전에 업데이트 된 이력이 있고, 업데이트 주기가 도달하거나 초과한 경우
@@ -226,7 +226,7 @@ def update_stock_price(event_info):
     elif price_info_status_qryset.first().update_type == 'DI':
         print('update_stock_price : delete&insert for {}'.format(event_info.event_name))
         update_start_dt = stock_price_init_start_dt
-        prev_stock_price_qryset = StockPrice.objects.filter(stock_event_id=event_info.stock_event_id)
+        prev_stock_price_qryset = PriceInfo.objects.filter(stock_event_id=event_info.stock_event_id)
         prev_stock_price_qryset.delete()
         price_info_status_model = price_info_status_qryset.first()
         price_info_status_model.mod_dt = datetime.date.today()
@@ -245,7 +245,7 @@ def update_stock_price(event_info):
         with transaction.atomic():
             for item in price_info_df.to_dict('records'):
                 # if StockPrice.objects.filter(date=item['date']).filter(event_code=event_info.event_code).count() < 1:
-                entry = StockPrice(**item)
+                entry = PriceInfo(**item)
                 entry.event_code = event_info.event_code
                 entry.stock_event_id = event_info.stock_event_id
                 entry.save()
@@ -260,7 +260,7 @@ def update_event_info(start_date_str):
     :param start_date_str: 시뮬레이션 시작날짜 입력값
     :return:
     '''
-    event_info_status_qryset = StockInfoUpdateStatus.objects.filter(table_type='E')
+    event_info_status_qryset = InfoUpdateStatus.objects.filter(table_type='E')
     # print('event_info_status={}'.format(event_info_status))
     # print('event_info_status count={}'.format(event_info_status.count()))
     # print('current time={}'.format(datetime.datetime.now()))
@@ -275,12 +275,12 @@ def update_event_info(start_date_str):
         # 종목코드가 변경되는 경우, 상장폐지 되는 경우, 신규상장되는 경우를 고려하여 업데이트 쿼리 작성 필요.
         with transaction.atomic():
             for item in whole_code_df:
-                entry = StockEvent(**item)
+                entry = EventInfo(**item)
                 entry.save()
         info_none_yn = event_info_status_qryset.count() == 0
         if info_none_yn:
             status_dict = {'table_type': 'E', 'mod_dt': datetime.datetime.now(), 'reg_dt': datetime.datetime.now()}
-            event_info_status_model = StockInfoUpdateStatus(**status_dict)
+            event_info_status_model = InfoUpdateStatus(**status_dict)
             event_info_status_model.save()
         else:
             event_info_status_model = event_info_status_qryset.first()
