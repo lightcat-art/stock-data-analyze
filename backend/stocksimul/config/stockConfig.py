@@ -18,8 +18,3 @@ OPEN_DART_API_KEY = 'c7b16eb1d1497ef4219a393248a46fb44b61da6e'
 EVENT_INFO_UPDATE_PERIOD = 9999
 # 종목별 주가정보 업데이트 날짜주기
 PRICE_INFO_UPDATE_PERIOD = 1
-
-"""
-used in batch
-"""
-INSERT_ALL = True  # 첫 insert 강제 실행 조작 여부
