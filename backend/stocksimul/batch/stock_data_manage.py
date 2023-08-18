@@ -19,7 +19,7 @@ ps.
 * 장 시작 전에는 시가,고가,종가,저가 가 모두 0으로 조회됨.
 '''
 first = False  # 첫 insert 진행중 여부
-insert_all = True  # 첫 insert 강제 실행 조작 여부
+insert_all = False  # 첫 insert 강제 실행 조작 여부
 
 
 # def stock_batch():
@@ -200,6 +200,7 @@ def manage_event_daily():
 
                         if (today_org - timedelta(
                                 days=1)).date() > event_status.first().mod_dt:  # 실행날짜를 제외하고 1일이상 누락된 경우
+                            print('실행날짜를 제외하고 1일이상 누락된 경우')
                             # 실행날짜를 제외한 업데이트 빠진 기간 insert
                             fromdate = (event_status.first().mod_dt + timedelta(days=1)).strftime('%Y%m%d')
                             todate = (today_org - timedelta(days=1)).strftime('%Y%m%d')
@@ -222,9 +223,10 @@ def manage_event_daily():
                                             entry.save()
 
                         if event_status.first().mod_dt.strftime('%Y%m%d') == today:
+                            print('금일 주가 UPDATE : ','code=',k,)
                             # 장 끝난 시점에 하루에 한번만 업데이트하는거면 스킵하고, 하루에 여러번 업데이트하는거면 해당날짜의 주가 계속 받아와서 업데이트해야함.
                             # -> 하루에 한번 실행이라도 처음 insert에 장중가가 반영될 경우를 대비해 업데이트하도록 함.
-                            today_event_info = PriceInfo.objects.filter(event_code=k, date=today)
+                            today_event_info = PriceInfo.objects.filter(stock_event_id=event_info.first().stock_event_id, date=today_org)
                             today_event_info.open = v['open']
                             today_event_info.close = v['close']
                             today_event_info.volume = v['volume']
@@ -233,7 +235,9 @@ def manage_event_daily():
                             today_event_info.value = v['value']
                             today_event_info.up_down_rate = v['up_down_rate']
                             today_event_info.update()
-                        elif v['open'] != 0 and v['high'] != 0 and v['low'] != 0 and v['close'] != 0:  # 종목이 비활성화된것으로 간주
+                        # 종목이 비활성화된것으로 간주되면 NO INSERT
+                        elif v['open'] != 0 and v['high'] != 0 and v['low'] != 0 and v['close'] != 0:
+                            print('금일 주가 INSERT : ','code=',k,)
                             entry = PriceInfo(**v)
                             entry.stock_event_id = event_info.first().stock_event_id
                             entry.save()
