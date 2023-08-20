@@ -17,7 +17,7 @@ services:
 #      - --default-collation=utf8_general_ci
     build:
       context: .
-      dockerfile: DB.Dockerfile
+      dockerfile: DB.dockerfile
     ports:
       - "4306:3306" #docker-compose run --service-ports 명령어 사용해야함.
     networks:
@@ -26,7 +26,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: App.Dockerfile
+      dockerfile: App.dockerfile
     command: >
       sh -c "cd /home/stock/backend &&
              python3 /home/stock/backend/manage.py makemigrations &&
