@@ -21,7 +21,7 @@ services:
     ports:
       - "4306:3306" #docker-compose run --service-ports 명령어 사용해야함.
     networks:
-      default:
+      network-default:
         ipv4_address: 172.21.0.30
   web:
     build:
@@ -37,10 +37,10 @@ services:
     ports:
       - "8100:8100"
     networks:
-      default:
+      network-default:
         ipv4_address: 172.21.0.40
 networks:
-  default:
+  network-default:
     ipam:
       driver: default
       config:
