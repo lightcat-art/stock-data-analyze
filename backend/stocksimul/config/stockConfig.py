@@ -14,7 +14,13 @@ TEST_START_DATE = '20180701'  # 기준날짜
 
 # open dart api key
 OPEN_DART_API_KEY = 'c7b16eb1d1497ef4219a393248a46fb44b61da6e'
-# 종목정보 업데이트 날짜주기
-EVENT_INFO_UPDATE_PERIOD = 9999
-# 종목별 주가정보 업데이트 날짜주기
-PRICE_INFO_UPDATE_PERIOD = 1
+# 종목 업데이트 배치 실행 시간
+BATCH_HOUR = 18
+BATCH_MIN = 00
+BATCH_SEC = 00
+
+BATCH_TEST = True  # 배치 테스트 여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
+BATCH_FIRST_INSERT_ALL = True  # 첫 insert 강제 실행 조작 여부
+BATCH_TEST_CODE_YN = True  # 테스트시 특정 코드만 진행 여부
+BATCH_TEST_CODE_LIST = ['005930']  # 특정 종목 테스트 시 종목코드 지정
+

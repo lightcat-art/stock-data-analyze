@@ -25,7 +25,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-30kc0n7n10f+*%cnekqfr)m8y8pnfoh)d7($2ly!rnpxg+$lln'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['127.0.0.1', '1.234.10.139', 'stockchartview.com', 'www.stockchartview.com']
 
@@ -136,7 +137,7 @@ LOGGING = {
     'handlers': {
         'console': {
             'level': 'INFO',
-            'filters': ['require_debug_true'],
+            # 'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
         },
         'django.server': {
@@ -151,7 +152,7 @@ LOGGING = {
         },
         'file': {
             'level': 'INFO',  # 로그레벨
-            'filters': ['require_debug_false'],  # DEBUG=False인 운영환경에서 사용
+            # 'filters': ['require_debug_false'],  # DEBUG=False인 운영환경에서 사용
             # RotatingFileHandler는 파일 크기가 설정한 크기보다 커지면 파일 뒤에 인덱스를 붙여서 백업한다.
             # 이 핸들러의 장점은 로그가 무한히 증가되더라도 일정 개수의 파일로 롤링(Rolling)되기 때문에
             # 로그 파일이 너무 커져서 디스크가 꽉 차는 위험을 방지할 수 있다.
