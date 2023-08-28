@@ -4,6 +4,8 @@ from pykrx import stock
 from datetime import timedelta, datetime
 from django.db import transaction
 import time
+import numpy as np
+import logging
 
 '''
 1. api 통신을 통해 현재 마켓에 등록된 종목정보를 모두 받아온다.
@@ -15,34 +17,41 @@ import time
             1. 삭제된 종목의 경우에는 주가정보와 종목정보를 삭제조치.
         4. 시가,종가,고가,저가 가 모두 0이면 휴일으로 간주하고 스킵.
 3. 종목업데이트현황 등록은 제일 마지막에 실행
+4. 오랜만에 앱을 재실행하는 경우에는 
+신규종목이 있을 경우 daily_batch만 실행하면 updatestatus에 등록이 안되어있기 때문에 init_batch를 무조건 실행해줘야함.
+ -> insert_all 플래그를 True로 해놓아야함.
 ps. 
 * 장 시작 전에는 시가,고가,종가,저가 가 모두 0으로 조회됨.
 '''
 first = False  # 첫 insert 진행중 여부
-insert_all = False  # 첫 insert 강제 실행 조작 여부
+insert_all = True  # 첫 insert 강제 실행 조작 여부
+test_certain_code = True  # 테스트시 사용. 모든 코드 포함 여부
+test_code_list = ['005930']  # 특정 종목 테스트 시 종목코드 지정
 
-
+logger = logging.getLogger('batch')
 # def stock_batch():
 #     print('stock_batch start')
 #     manage_event_all()
 
 
 def manage_event_init():
-    print('manage_event_init start')
+    logger.info('manage_event_init start')
     global first
     global insert_all
+    global test_certain_code
+    global test_code_list
     today_org = datetime.now()
-    print('cur time = ', today_org)
+    logging.debug('cur time = ', today_org)
     today = today_org.strftime('%Y%m%d')
 
     cur_event_info = EventInfo.objects.all()
     start_date_str = datetime.now().strftime('%Y%m%d')
     market_event_info = krx.get_market_ticker_and_name(date=start_date_str, market='ALL')
 
-    whole_code_df = [{'event_code': k, 'event_name': v} for k, v in market_event_info.iteritems()]
+    whole_code = [{'event_code': k, 'event_name': v} for k, v in market_event_info.iteritems()]
     # 전체 기간 전체 종목 insert
     if cur_event_info.count() == 0 or insert_all:
-        print('first batch start')
+        logging.info('first batch start')
         first = True
         insert_all = False
         # test code
@@ -51,24 +60,29 @@ def manage_event_init():
         get_market_data_time_taken = 0.0
         insert_market_data_time_taken = 0.0
         insert_count = 0
-        for item in whole_code_df:
+
+        for item in whole_code:
             event_code = item['event_code']
+            # 특정 코드 테스트 시 사용
+            if test_certain_code:
+                if event_code not in test_code_list:
+                    continue
             # 기존 등록된 종목인지 확인.
             event_info = EventInfo.objects.filter(event_code=event_code)
             if event_info.count() != 0:
                 event_status = InfoUpdateStatus.objects.filter(stock_event_id=event_info.first().stock_event_id)
                 if event_status.count() != 0:  # 이미 등록된 것이면 스킵.
-                    print(item['event_code'], ' already inserted. skip inserting.')
+                    logger.info(item['event_code'], ' already inserted. skip inserting.')
                     continue
                 else:  # 종목정보 INSERT 중, 비정상종료된 케이스로 간주하고 해당 종목정보들 삭제 후 재등록
-                    print(item['event_code'], ' already inserted. but not completed. delete and re-insert.')
+                    logger.info(item['event_code'], ' already inserted. but not completed. delete and re-insert.')
                     event_price = PriceInfo.objects.filter(stock_event_id=event_info.first().stock_event_id)
                     event_info.delete()
                     event_price.delete()
 
             # 신규종목일 경우에는 위의 로직을 무시하고, 기존정보가 없으므로 그냥 INSERT 된다.
             insert_count += 1
-            print(item['event_code'], ' inserting.. inserting count = ', insert_count)
+            logger.info(item['event_code'], ' inserting.. inserting count = ', insert_count)
             # stockevent 테이블에 insert
             with transaction.atomic():
                 entry = EventInfo(**item)
@@ -79,6 +93,7 @@ def manage_event_init():
             start_get_market_data = datetime.now().timestamp()
 
             price_info_df = stock.get_market_ohlcv_by_date(fromdate='19000101', todate=today, ticker=event_code)
+            price_info_df = price_info_df.replace({np.nan: None})
             # print('price_info = ', price_info_df)
             end_get_market_data = datetime.now().timestamp()
             get_market_data_time_taken += (end_get_market_data - start_get_market_data)
@@ -88,7 +103,6 @@ def manage_event_init():
                 columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high', '저가': 'low',
                          '거래대금': 'value', '등락률': 'up_down_rate'},
                 inplace=True)
-
             # stockprice 테이블에 insert
             with transaction.atomic():
                 for priceitem in price_info_df.to_dict('records'):
@@ -106,20 +120,22 @@ def manage_event_init():
             event_status_insert = InfoUpdateStatus(**status_dict)
             event_status_insert.save()
 
-        print('get market data time = ', get_market_data_time_taken)
-        print('insert market data time = ', insert_market_data_time_taken)
-        print('manage_event_init end')
+        logger.info('get market data time = ', get_market_data_time_taken)
+        logger.info('insert market data time = ', insert_market_data_time_taken)
+        logger.info('manage_event_init end')
         first = False
     else:
-        print('skip init_manage_event.')
+        logger.info('skip init_manage_event.')
 
 
 def manage_event_daily():
-    print('manage_event_daily start')
+    logger.info('manage_event_daily start')
     global first
     global insert_all
+    global test_certain_code
+    global test_code_list
     today_org = datetime.now()
-    print('cur time = ', today_org)
+    logger.debug('cur time = ', today_org)
     today = today_org.strftime('%Y%m%d')
 
     cur_event_info = EventInfo.objects.all()
@@ -129,8 +145,8 @@ def manage_event_daily():
     whole_code_df = [{'event_code': k, 'event_name': v} for k, v in market_event_info.iteritems()]
     # 하루단위 전체종목 insert
     if cur_event_info.count() != 0 and not insert_all:
-        print('daily batch start')
-        print('first_batch executing status = ', first)
+        logging.info('daily batch start')
+        logger.info('first_batch executing status = ', first)
         if not first:
             price_info_df = stock.get_market_ohlcv_by_ticker(date=today, market='ALL')
             # 시가,종가,고가,저가 가 모두 0이면 휴일으로 간주하고 스킵.
@@ -170,10 +186,12 @@ def manage_event_daily():
                     for delete_event_code in del_event_result:
                         del_event_info = EventInfo.objects.filter(event_code=delete_event_code)
                         if len(del_event_info) != 0:
+                            print('종목 삭제 : ', del_event_info.first().event_name, ', / ',
+                                  del_event_info.first().event_code)
                             # stockevent 테이블 업데이트 - 삭제 종목
+                            del_event_id = del_event_info.first().stock_event_id
                             del_event_info.delete()
 
-                            del_event_id = del_event_info.first().stock_event_id
                             # stockprice 테이블 업데이트 - 삭제 종목
                             del_event_price = PriceInfo.objects.filter(stock_event_id=del_event_id)
                             del_event_price.delete()
@@ -194,13 +212,21 @@ def manage_event_daily():
                 # priceinfo 테이블 업데이트 - 기존종목과 신규종목
                 with transaction.atomic():
                     for k, v in price_info_df.to_dict('index').items():
+                        # 특정 코드 테스트 시 사용
+                        if test_certain_code:
+                            if k not in test_code_list:
+                                continue
                         event_info = EventInfo.objects.filter(event_code=k)
+                        if event_info.count() == 0: # 가격정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
+                            logger.error('KRX 종목 정보에 등록되어 있지 않음. code = ', k)
+                            continue
+                        logger.debug('기존종목 신규종목 주가 UPDATE : ', k, ', / ', event_info.first().event_name)
                         event_status = InfoUpdateStatus.objects.filter(
                             stock_event_id=event_info.first().stock_event_id)
 
                         if (today_org - timedelta(
                                 days=1)).date() > event_status.first().mod_dt:  # 실행날짜를 제외하고 1일이상 누락된 경우
-                            print('실행날짜를 제외하고 1일이상 누락된 경우')
+                            logger.debug('실행날짜를 제외하고 1일이상 누락된 경우')
                             # 실행날짜를 제외한 업데이트 빠진 기간 insert
                             fromdate = (event_status.first().mod_dt + timedelta(days=1)).strftime('%Y%m%d')
                             todate = (today_org - timedelta(days=1)).strftime('%Y%m%d')
@@ -223,10 +249,11 @@ def manage_event_daily():
                                             entry.save()
 
                         if event_status.first().mod_dt.strftime('%Y%m%d') == today:
-                            print('금일 주가 UPDATE : ','code=',k,)
+                            logger.info('금일 주가 UPDATE : ', 'code=', k, )
                             # 장 끝난 시점에 하루에 한번만 업데이트하는거면 스킵하고, 하루에 여러번 업데이트하는거면 해당날짜의 주가 계속 받아와서 업데이트해야함.
                             # -> 하루에 한번 실행이라도 처음 insert에 장중가가 반영될 경우를 대비해 업데이트하도록 함.
-                            today_event_info = PriceInfo.objects.filter(stock_event_id=event_info.first().stock_event_id, date=today_org)
+                            today_event_info = PriceInfo.objects.filter(
+                                stock_event_id=event_info.first().stock_event_id, date=today_org)
                             today_event_info.open = v['open']
                             today_event_info.close = v['close']
                             today_event_info.volume = v['volume']
@@ -237,7 +264,7 @@ def manage_event_daily():
                             today_event_info.update()
                         # 종목이 비활성화된것으로 간주되면 NO INSERT
                         elif v['open'] != 0 and v['high'] != 0 and v['low'] != 0 and v['close'] != 0:
-                            print('금일 주가 INSERT : ','code=',k,)
+                            logger.info('금일 주가 INSERT : ', 'code=', k, )
                             entry = PriceInfo(**v)
                             entry.stock_event_id = event_info.first().stock_event_id
                             entry.save()
@@ -250,10 +277,12 @@ def manage_event_daily():
                             event_status_insert = InfoUpdateStatus(**status_dict)
                             event_status_insert.save()
                         else:
-                            event_status.first().mod_dt = datetime.now()
-                            event_status.first().save()
+                            # event_status.first().mod_dt = datetime.now()
+                            # event_status.first().save()
+                            event_status.update(mod_dt=datetime.now())
+                        time.sleep(0.1)
             else:
-                print('it''s holiday. only update omitted event information about the last period')
+                logger.info('it''s holiday. only update omitted event information about the last period')
                 with transaction.atomic():
                     for k, v in price_info_df.to_dict('index').items():
                         event_info = EventInfo.objects.filter(event_code=k)
@@ -282,7 +311,7 @@ def manage_event_daily():
                                             entry = PriceInfo(**priceitem)
                                             entry.stock_event_id = event_info.first().stock_event_id
                                             entry.save()
-                            print('event code ', k, ' : updating omitted informations complete')
+                            logger.info('event code ', k, ' : updating omitted informations complete')
 
                         event_status = InfoUpdateStatus.objects.filter(
                             stock_event_id=event_info.first().stock_event_id)
@@ -295,11 +324,11 @@ def manage_event_daily():
                             for item in event_status:
                                 item.mod_dt = datetime.now()
                                 item.save()
-                        time.sleep(0.3)
+                        time.sleep(0.1)
 
         else:
-            print('first batch executing, so skip daily batch')
-    print('manage_event_daily end')
+            logger.info('first batch executing, so skip daily batch')
+    logger.info('manage_event_daily end')
 
 # def manage_event_all():
 #     global first
