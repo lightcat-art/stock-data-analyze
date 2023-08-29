@@ -1,1 +1,1 @@
-sudo docker exec -it stock-data-analyze-web /bin/bash
+sudo docker exec -it stock-data-analyze-batch /bin/bash

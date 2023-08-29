@@ -23,10 +23,10 @@ services:
     networks:
       network-default:
         ipv4_address: 172.21.0.30
-  web:
+  batch:
     build:
       context: .
-      dockerfile: App.dockerfile
+      dockerfile: Batch.dockerfile
     command: >
       sh -c "cd /home/stock/backend &&
              python3 /home/stock/backend/manage.py makemigrations &&
