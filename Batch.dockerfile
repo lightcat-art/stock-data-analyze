@@ -31,8 +31,6 @@ RUN pip3 install -r /home/stock/backend/requirements.txt
 #RUN echo "nohup python3 /home/stock/backend/manage.py runserver 0.0.0.0:8100 &" > ./script/django_server_start.sh
 #RUN chmod +x ./script/*.sh
 
-WORKDIR /shared
-
 #COPY ./backend/dist/stock_data_analyze*.whl /root/
 #RUN pip install /root/stock_data_analyze*.whl
 #RUN find . -name 'stock_data_analyze*'
