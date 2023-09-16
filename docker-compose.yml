@@ -21,7 +21,7 @@ services:
     ports:
       - "4306:3306" #docker-compose run --service-ports 명령어 사용해야함.
     volumes:
-      - "db-volume:/usr/lib/mysql"
+      - "db-volume:/var/lib/mysql"
     networks:
       network-default:
         ipv4_address: 172.21.0.30
@@ -41,6 +41,9 @@ services:
     networks:
       network-default:
         ipv4_address: 172.21.0.40
+volumes:
+  db-volume:
+    name: db-volume
 networks:
   network-default:
     ipam:
