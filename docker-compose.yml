@@ -20,6 +20,8 @@ services:
       dockerfile: DB.dockerfile
     ports:
       - "4306:3306" #docker-compose run --service-ports 명령어 사용해야함.
+    volumes:
+      - "db-volume:/usr/lib/mysql"
     networks:
       network-default:
         ipv4_address: 172.21.0.30
