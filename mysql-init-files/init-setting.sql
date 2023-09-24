@@ -6,4 +6,5 @@ CREATE USER 'stock'@'localhost' identified BY 'stock';
 CREATE USER 'stock'@'%' identified BY 'stock';
 GRANT ALL PRIVILEGES ON *.* TO 'stock'@'localhost';
 GRANT ALL PRIVILEGES ON *.* TO 'stock'@'%';
+SET SESSION wait_timeout=172800;
 FLUSH PRIVILEGES;
