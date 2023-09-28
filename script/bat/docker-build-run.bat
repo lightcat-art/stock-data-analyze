@@ -4,5 +4,6 @@ rem setx DJANGO_DATABASE "mysql-docker"
 docker compose run --service-ports -d db
 docker compose run --service-ports -d batch
 
+docker compose -f .\docker-compose.mac.yml run --service-ports -d db
 rem docker compose build db
 rem docker compose build web

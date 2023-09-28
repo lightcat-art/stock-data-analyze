@@ -21,6 +21,7 @@ RUN pip3 install --upgrade pip
 
 # copy project
 COPY . .
+RUN mkdir ./backend/logs
 #RUN yum install -y libmysqlclient-dev
 #RUN pip install --upgrade setuptools
 # install dependencies
