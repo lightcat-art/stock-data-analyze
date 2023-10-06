@@ -52,8 +52,8 @@ class operator:
                                    id='manage_event_daily',
                                    replace_existing=True)
 
-            self.scheduler.add_job(validate_connection, 'interval', hours=2)
-
+            self.scheduler.add_job(validate_connection, 'interval', hours=2, id='validate_connection',
+                                   replace_existing=True)
 
             self.scheduler.start()
         except Exception as e:
