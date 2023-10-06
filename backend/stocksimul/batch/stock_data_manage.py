@@ -33,6 +33,26 @@ logger = logging.getLogger('batch')
 #     print('stock_batch start')
 #     manage_event_all()
 
+def validate_connection():
+    try:
+        event_info = EventInfo.objects.all()
+        logger.info('[validate_connection] event_info count={}'.format(event_info.count()))
+        # logger.info('[test_connection] event_info selected')
+    except Exception as e:
+        logger.exception('[validate_connection] error occured')
+
+
+# def make_sure_mysql_usable():
+#     from django.db import connection, connections
+#     # mysql is lazily connected to in django.
+#     # connection.connection is None means
+#     # you have not connected to mysql before
+#     if connection.connection and not connection.is_usable():
+#         # destroy the default mysql connection
+#         # after this line, when you use ORM methods
+#         # django will reconnect to the default mysql
+#         del connections._connections.default
+
 
 def manage_event_init():
     try:
@@ -145,7 +165,7 @@ def manage_event_daily():
             logger.info('first_batch executing status = {}'.format(first))
             if not first:
                 price_info_df = stock.get_market_ohlcv_by_ticker(date=today, market='ALL')
-                # 시가,종가,고가,저가 가 모두 0이면 휴일으로 간주하고 스킵.
+                # 전체종목에 대해 시가,종가,고가,저가 가 모두 0이면 휴일으로 간주하고 스킵.
                 holiday = (price_info_df[['시가', '고가', '저가', '종가']] == 0).all(axis=None)
                 # stockprice 테이블 업데이트 - 신규/기존 종목
                 # price_info_df = price_info.reset_index() # 종목코드를 컬럼으로 빼기.
@@ -154,128 +174,131 @@ def manage_event_daily():
                              '저가': 'low',
                              '거래대금': 'value', '등락률': 'up_down_rate'}, inplace=True)
                 price_info_df['date'] = datetime.now()
-                if not holiday:
-                    new_event_result = {}
-                    del_event_result = []
-                    # delete 항목을 따로 나중에 제외시키기 위해 현재 등록되어있는 종목 미리 모두 다 넣어둠.
+
+                # if not holiday:
+                new_event_result = {}
+                del_event_result = []
+                # delete 항목을 따로 나중에 제외시키기 위해 현재 등록되어있는 종목 미리 모두 다 넣어둠.
+                for cur_event in cur_event_info:
+                    del_event_result.append(cur_event.event_code)
+                # 등록되어있는 종목, 신규종목, 삭제될 종목 구분.
+                for market_event_code, market_event_name in market_event_info.iteritems():
+                    code_exist = False
+                    code_new = False
+                    code_delete = False
                     for cur_event in cur_event_info:
-                        del_event_result.append(cur_event.event_code)
-                    # 등록되어있는 종목, 신규종목, 삭제될 종목 구분.
-                    for market_event_code, market_event_name in market_event_info.iteritems():
-                        code_exist = False
-                        code_new = False
-                        code_delete = False
-                        for cur_event in cur_event_info:
-                            if cur_event.event_code == market_event_code:
-                                code_exist = True
-                                # event_result['exist'].append(item['event_code'])
-                                # 현재 시장에서 존재하는 종목이 db에서 존재한다면 그 외에는 모두 삭제될 종목이라는 점을 이용하여 필터링.
-                                del_event_result.remove(market_event_code)
+                        if cur_event.event_code == market_event_code:
+                            code_exist = True
+                            # event_result['exist'].append(item['event_code'])
+                            # 현재 시장에서 존재하는 종목이 db에서 존재한다면 그 외에는 모두 삭제될 종목이라는 점을 이용하여 필터링.
+                            del_event_result.remove(market_event_code)
 
-                        if not code_exist:
-                            code_new = True
-                            new_event_result.update({market_event_code: market_event_name})
+                    if not code_exist:
+                        code_new = True
+                        new_event_result.update({market_event_code: market_event_name})
 
-                    # 삭제 종목 관리
-                    del_event_id_list = []
+                # 삭제 종목 관리
+                del_event_id_list = []
 
-                    for delete_event_code in del_event_result:
-                        with transaction.atomic():
-                            del_event_info = EventInfo.objects.filter(event_code=delete_event_code)
-                            if len(del_event_info) != 0:
-                                logger.info('종목 삭제 : {} / {}'.format(del_event_info.first().event_name,
-                                                                     del_event_info.first().event_code))
+                for delete_event_code in del_event_result:
+                    with transaction.atomic():
+                        del_event_info = EventInfo.objects.filter(event_code=delete_event_code)
+                        if len(del_event_info) != 0:
+                            logger.info('종목 삭제 : {} / {}'.format(del_event_info.first().event_name,
+                                                                 del_event_info.first().event_code))
 
-                                # stockevent 테이블 업데이트 - 삭제 종목
-                                del_event_id = del_event_info.first().stock_event_id
-                                del_event_info.delete()
+                            # stockevent 테이블 업데이트 - 삭제 종목
+                            del_event_id = del_event_info.first().stock_event_id
+                            del_event_info.delete()
 
-                                # stockprice 테이블 업데이트 - 삭제 종목
-                                del_event_price = PriceInfo.objects.filter(stock_event_id=del_event_id)
-                                del_event_price.delete()
+                            # stockprice 테이블 업데이트 - 삭제 종목
+                            del_event_price = PriceInfo.objects.filter(stock_event_id=del_event_id)
+                            del_event_price.delete()
 
-                                # 관리상태정보 삭제
-                                del_event_status = InfoUpdateStatus.objects.filter(stock_event_id=del_event_id)
-                                del_event_status.delete()
+                            # 관리상태정보 삭제
+                            del_event_status = InfoUpdateStatus.objects.filter(stock_event_id=del_event_id)
+                            del_event_status.delete()
 
-                    # stockevent 테이블 업데이트 - 신규 종목
-                    # db에 넣을 데이터 구성
-                    # new_event_insert_db = [{'event_code': new_event_code, 'event_name': new_event_name}
-                    #                        for new_event_code, new_event_name in new_event_result.items()]
-                    # with transaction.atomic():
-                    #     for item in new_event_insert_db:
-                    #         entry = EventInfo(**item)
-                    #         entry.save()
+                # stockevent 테이블 업데이트 - 신규 종목
+                # db에 넣을 데이터 구성
+                # new_event_insert_db = [{'event_code': new_event_code, 'event_name': new_event_name}
+                #                        for new_event_code, new_event_name in new_event_result.items()]
+                # with transaction.atomic():
+                #     for item in new_event_insert_db:
+                #         entry = EventInfo(**item)
+                #         entry.save()
 
-                    # eventinfo/priceinfo 테이블 업데이트 - 기존종목과 신규종목
-                    for k, v in price_info_df.to_dict('index').items():
-                        with transaction.atomic():
-                            # 특정 코드 테스트 시 사용
-                            if BATCH_TEST_CODE_YN:
-                                if k not in BATCH_TEST_CODE_LIST:
-                                    continue
-
-                            new_event_yn = False
-                            # stockevent 테이블 업데이트 - 신규 종목
-                            if k in new_event_result:
-                                entry = EventInfo(**{'event_code': k, 'event_name': new_event_result[k]})
-                                entry.save()
-                                new_event_yn = True
-
-                            event_info = EventInfo.objects.filter(event_code=k)
-                            if event_info.count() == 0:  # 가격정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
-                                logger.error('KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(k))
+                # eventinfo/priceinfo 테이블 업데이트 - 기존종목과 신규종목
+                for k, v in price_info_df.to_dict('index').items():
+                    with transaction.atomic():
+                        # 특정 코드 테스트 시 사용
+                        if BATCH_TEST_CODE_YN:
+                            if k not in BATCH_TEST_CODE_LIST:
                                 continue
-                            logger.debug('기존/신규종목 UPDATE : {} / {}'.format(k, event_info.first().event_name))
 
-                            if new_event_yn:  # 신규종목이면 현재까지의 모든 정보 insert
-                                price_info_df = stock.get_market_ohlcv_by_date(fromdate='19000101', todate=today,
-                                                                               ticker=k)
-                                price_info_df = price_info_df.replace({np.nan: None})
-                                price_info_df = price_info_df.reset_index()
-                                price_info_df.rename(
-                                    columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
-                                             '저가': 'low',
-                                             '거래대금': 'value', '등락률': 'up_down_rate'},
-                                    inplace=True)
-                                # stockprice 테이블에 insert
-                                with transaction.atomic():
-                                    for priceitem in price_info_df.to_dict('records'):
-                                        if priceitem['open'] != 0 and priceitem['high'] != 0 \
-                                                and priceitem['low'] != 0 and priceitem['close'] != 0:
-                                            entry = PriceInfo(**priceitem)
-                                            entry.stock_event_id = event_info.first().stock_event_id
-                                            entry.save()
-                            else:  # 기존종목이면 updateStatus를 확인하여 누락된 경우를 체크 후 INSERT 및 UPDATE
-                                event_status = InfoUpdateStatus.objects.filter(
-                                    stock_event_id=event_info.first().stock_event_id)
+                        new_event_yn = False
+                        # stockevent 테이블 업데이트 - 신규 종목
+                        if k in new_event_result:
+                            entry = EventInfo(**{'event_code': k, 'event_name': new_event_result[k]})
+                            entry.save()
+                            new_event_yn = True
 
-                                if (today_org - timedelta(
-                                        days=1)).date() > event_status.first().mod_dt:  # 실행날짜를 제외하고 1일이상 누락된 경우
-                                    logger.debug('실행날짜를 제외하고 1일이상 누락된 경우')
-                                    # 실행날짜를 제외한 업데이트 빠진 기간 insert
-                                    fromdate = (event_status.first().mod_dt + timedelta(days=1)).strftime('%Y%m%d')
-                                    todate = (today_org - timedelta(days=1)).strftime('%Y%m%d')
-                                    omit_price_info_df = stock.get_market_ohlcv_by_date(fromdate=fromdate,
-                                                                                        todate=todate,
-                                                                                        ticker=k)
-                                    if len(omit_price_info_df) != 0:  # 휴일에 의한 업데이트 시간차 발생 경우 제외
-                                        omit_price_info_df = omit_price_info_df.reset_index()
-                                        omit_price_info_df.rename(
-                                            columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume',
-                                                     '고가': 'high',
-                                                     '저가': 'low',
-                                                     '거래대금': 'value', '등락률': 'up_down_rate'},
-                                            inplace=True)
-                                        with transaction.atomic():
-                                            for price_item in omit_price_info_df.to_dict('records'):
-                                                # 종목이 비활성화된것으로 간주
-                                                if price_item['open'] != 0 and price_item['high'] != 0 \
-                                                        and price_item['low'] != 0 and price_item['close'] != 0:
-                                                    entry = PriceInfo(**price_item)
-                                                    entry.stock_event_id = event_info.first().stock_event_id
-                                                    entry.save()
+                        event_info = EventInfo.objects.filter(event_code=k)
+                        if event_info.count() == 0:  # 가격정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
+                            logger.error('KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(k))
+                            continue
+                        logger.debug('기존/신규종목 UPDATE : {} / {}'.format(k, event_info.first().event_name))
 
+                        if new_event_yn:  # 신규종목이면 현재까지의 모든 정보 insert
+                            price_info_df = stock.get_market_ohlcv_by_date(fromdate='19000101', todate=today,
+                                                                           ticker=k)
+                            price_info_df = price_info_df.replace({np.nan: None})
+                            price_info_df = price_info_df.reset_index()
+                            price_info_df.rename(
+                                columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
+                                         '저가': 'low',
+                                         '거래대금': 'value', '등락률': 'up_down_rate'},
+                                inplace=True)
+                            # stockprice 테이블에 insert
+                            with transaction.atomic():
+                                for priceitem in price_info_df.to_dict('records'):
+                                    if priceitem['open'] != 0 and priceitem['high'] != 0 \
+                                            and priceitem['low'] != 0 and priceitem['close'] != 0:
+                                        entry = PriceInfo(**priceitem)
+                                        entry.stock_event_id = event_info.first().stock_event_id
+                                        entry.save()
+                        else:  # 기존종목이면 updateStatus를 확인하여 누락된 경우를 체크 후 INSERT 및 UPDATE
+                            event_status = InfoUpdateStatus.objects.filter(
+                                stock_event_id=event_info.first().stock_event_id)
+
+                            if (today_org - timedelta(
+                                    days=1)).date() > event_status.first().mod_dt:  # 실행날짜를 제외하고 1일이상 누락된 경우
+                                logger.debug('실행날짜를 제외하고 1일이상 누락된 경우')
+                                # 실행날짜를 제외한 업데이트 빠진 기간 insert
+                                fromdate = (event_status.first().mod_dt + timedelta(days=1)).strftime('%Y%m%d')
+                                todate = (today_org - timedelta(days=1)).strftime('%Y%m%d')
+                                omit_price_info_df = stock.get_market_ohlcv_by_date(fromdate=fromdate,
+                                                                                    todate=todate,
+                                                                                    ticker=k)
+                                if len(omit_price_info_df) != 0:  # 휴일에 의한 업데이트 시간차 발생 경우 제외
+                                    omit_price_info_df = omit_price_info_df.reset_index()
+                                    omit_price_info_df.rename(
+                                        columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume',
+                                                 '고가': 'high',
+                                                 '저가': 'low',
+                                                 '거래대금': 'value', '등락률': 'up_down_rate'},
+                                        inplace=True)
+                                    with transaction.atomic():
+                                        for price_item in omit_price_info_df.to_dict('records'):
+                                            # 종목이 비활성화된것으로 간주
+                                            if price_item['open'] != 0 and price_item['high'] != 0 \
+                                                    and price_item['low'] != 0 and price_item['close'] != 0:
+                                                entry = PriceInfo(**price_item)
+                                                entry.stock_event_id = event_info.first().stock_event_id
+                                                entry.save()
+                                logger.info('{} : updating omitted informations complete'.format(k))
+
+                            if not holiday:
                                 if event_status.first().mod_dt.strftime('%Y%m%d') == today:
                                     logger.info('금일 주가 UPDATE : code = {}'.format(k))
                                     # 장 끝난 시점에 하루에 한번만 업데이트하는거면 스킵하고, 하루에 여러번 업데이트하는거면 해당날짜의 주가 계속 받아와서 업데이트해야함.
@@ -297,73 +320,23 @@ def manage_event_daily():
                                     entry.stock_event_id = event_info.first().stock_event_id
                                     entry.save()
 
-                            event_status = InfoUpdateStatus.objects.filter(
-                                stock_event_id=event_info.first().stock_event_id)
-                            if len(event_status) == 0:
-                                status_dict = {'table_type': 'P', 'mod_dt': datetime.now(), 'reg_dt': datetime.now(),
-                                               'stock_event_id': event_info.first().stock_event_id}
-                                event_status_insert = InfoUpdateStatus(**status_dict)
-                                event_status_insert.save()
-                            else:
-                                # event_status.first().mod_dt = datetime.now()
-                                # event_status.first().save()
-                                event_status.update(mod_dt=datetime.now())
-                            time.sleep(0.1)
-                else:
-                    logger.info('it''s holiday. only update omitted event information about the last period')
-                    for k, v in price_info_df.to_dict('index').items():
-                        with transaction.atomic():
-                            # 특정 코드 테스트 시 사용
-                            if BATCH_TEST_CODE_YN:
-                                if k not in BATCH_TEST_CODE_LIST:
-                                    continue
-                            event_info = EventInfo.objects.filter(event_code=k)
-                            if event_info.count() == 0:  # 가격정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
-                                logger.error('KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(k))
-                                continue
-                            event_status = InfoUpdateStatus.objects.filter(
-                                stock_event_id=event_info.first().stock_event_id)
+                        event_status = InfoUpdateStatus.objects.filter(
+                            stock_event_id=event_info.first().stock_event_id)
+                        if len(event_status) == 0:
+                            status_dict = {'table_type': 'P', 'mod_dt': datetime.now(), 'reg_dt': datetime.now(),
+                                           'stock_event_id': event_info.first().stock_event_id}
+                            event_status_insert = InfoUpdateStatus(**status_dict)
+                            event_status_insert.save()
+                        else:
+                            # event_status.first().mod_dt = datetime.now()
+                            # event_status.first().save()
+                            event_status.update(mod_dt=datetime.now())
+                        time.sleep(0.1)
+        else:
+            logger.info('first batch executing, so skip daily batch')
 
-                            if (today_org - timedelta(
-                                    days=1)).date() > event_status.first().mod_dt:  # 실행날짜를 제외하고 1일이상 누락된 경우
-                                # 업데이트 빠진 기간 insert
-                                fromdate = (event_status.first().mod_dt + timedelta(days=1)).strftime('%Y%m%d')
-                                todate = (today_org - timedelta(days=1)).strftime('%Y%m%d')
-                                omit_price_info_df = stock.get_market_ohlcv_by_date(fromdate=fromdate, todate=todate,
-                                                                                    ticker=k)
-                                if len(omit_price_info_df) != 0:  # 휴일에 의한 업데이트 시간차 발생 경우 제외
-                                    omit_price_info_df = omit_price_info_df.reset_index()
-                                    omit_price_info_df.rename(
-                                        columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume',
-                                                 '고가': 'high',
-                                                 '저가': 'low',
-                                                 '거래대금': 'value', '등락률': 'up_down_rate'},
-                                        inplace=True)
-                                    with transaction.atomic():
-                                        for priceitem in omit_price_info_df.to_dict('records'):
-                                            # 종목이 비활성화된것으로 간주
-                                            if priceitem['open'] != 0 and priceitem['high'] != 0 \
-                                                    and priceitem['low'] != 0 and priceitem['close'] != 0:
-                                                entry = PriceInfo(**priceitem)
-                                                entry.stock_event_id = event_info.first().stock_event_id
-                                                entry.save()
-                                logger.info('{} : updating omitted informations complete'.format(k))
-
-                            event_status = InfoUpdateStatus.objects.filter(
-                                stock_event_id=event_info.first().stock_event_id)
-                            if len(event_status) == 0:
-                                status_dict = {'table_type': 'P', 'mod_dt': datetime.now(), 'reg_dt': datetime.now(),
-                                               'stock_event_id': event_info.first().stock_event_id}
-                                event_status_insert = InfoUpdateStatus(**status_dict)
-                                event_status_insert.save()
-                            else:
-                                for item in event_status:
-                                    item.mod_dt = datetime.now()
-                                    item.save()
-                            time.sleep(0.1)
-            else:
-                logger.info('first batch executing, so skip daily batch')
         logger.info('[manage_event_daily] end')
+
     except Exception as e:
         logger.exception('[manage_event_daily] error occured')
 

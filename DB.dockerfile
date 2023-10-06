@@ -19,6 +19,8 @@ ADD ./mysql-init-files /docker-entrypoint-initdb.d
 #포트 명시만 해주는 용도이고 다른 기능은 없음 직접 port 설정하려면 docker-compose.yml에서 설정하거나 직접 명령어로 매핑해야함.
 EXPOSE 3306
 
+RUN apt-get update
+RUN apt-get install -y vim
 # CMD 를 사용하면 명령을 한번 수행하고 종료되는 이미지를 생성하게 됨!
 CMD ["mysqld"]
 #CMD ["select * from user,host from user;"]
