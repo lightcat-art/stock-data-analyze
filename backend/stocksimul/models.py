@@ -81,6 +81,10 @@ class fundamentalInfo(models.Model):
     stock_tot_co = models.BigIntegerField(default=0)  # 총 발행 주식수
     cap = models.BigIntegerField(default=0)  # 시가총액
     eps = models.IntegerField(default=0)  # 주당순이익
+    bps = models.IntegerField(default=0)  # 주당순자산가치
+    per = models.FloatField(default=0)
+    pbr = models.FloatField(default=0)
+    roe = models.FloatField(default=0)
     profit_loss = models.BigIntegerField(default=0)  # 당기순이익(손실)
     profit_loss_before_tax = models.BigIntegerField(default=0)  # 세전계속사업이익
     assets = models.BigIntegerField(default=0)  # 자산총계
