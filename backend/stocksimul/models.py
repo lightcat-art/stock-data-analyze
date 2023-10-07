@@ -65,10 +65,29 @@ class InfoUpdateStatus(models.Model):
     stock_info_update_status_id = models.AutoField(primary_key=True)
     table_type = models.CharField(max_length=1)  # 'P' : 주가테이블, 'E' : 종목코드테이블
     stock_event_id = models.IntegerField(default=-1)
-    
+
     # 'DI' : Delete&Insert all row data , # 'UD': update additional row
     update_type = models.CharField(max_length=2, default='UD')
     mod_dt = models.DateField(default=timezone.now)
     reg_dt = models.DateField()
 
     objects = models.Manager()
+
+
+class fundamentalInfo(models.Model):
+    fm_info_id = models.AutoField(primary_key=True)
+    stock_event_id = models.IntegerField(default=-1)
+    quarter_name = models.IntegerField(default=-1)  # 분기명
+    stock_tot_co = models.BigIntegerField(default=0)  # 총 발행 주식수
+    cap = models.BigIntegerField(default=0)  # 시가총액
+    eps = models.IntegerField(default=0)  # 주당순이익
+    profit_loss = models.BigIntegerField(default=0)  # 당기순이익(손실)
+    profit_loss_before_tax = models.BigIntegerField(default=0)  # 세전계속사업이익
+    assets = models.BigIntegerField(default=0)  # 자산총계
+    liabilities = models.BigIntegerField(default=0)  # 부채총계
+    equity = models.BigIntegerField(default=0)  # 자본총계
+    revenue = models.BigIntegerField(default=0)  # 수익(매출액)
+    operating_income_loss = models.BigIntegerField(default=0)  # 영업이익
+    investing_cash_flow = models.BigIntegerField(default=0)  # 투자활동현금흐름
+    operating_cash_flow = models.BigIntegerField(default=0)  # 영업활동현금흐름
+    financing_cash_flow = models.BigIntegerField(default=0)  # 재무활동현금흐름
