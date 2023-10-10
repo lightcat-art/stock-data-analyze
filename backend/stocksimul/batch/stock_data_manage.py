@@ -1,12 +1,14 @@
-from ..models import PriceInfo, InfoUpdateStatus, SimulResult, EventInfo, SimulParam
+from ..models import PriceInfo, InfoUpdateStatus, SimulResult, EventInfo, SimulParam, FundamentalInfo
 from pykrx.website import krx
 from pykrx import stock
 from datetime import timedelta, datetime
 from django.db import transaction
 import time
 import numpy as np
+from numpy.lib import math
 import logging
 from ..config.stockConfig import BATCH_TEST_CODE_YN, BATCH_TEST_CODE_LIST, BATCH_FIRST_INSERT_ALL
+from ..custom.opendartreader.dart_manager import DartManager
 
 '''
 1. api 통신을 통해 현재 마켓에 등록된 종목정보를 모두 받아온다.
@@ -339,6 +341,42 @@ def manage_event_daily():
 
     except Exception as e:
         logger.exception('[manage_event_daily] error occured')
+
+
+def manage_fundamental_daily():
+    cur_datetime = datetime.now()
+    cur_date_str = cur_datetime.strftime('%Y%m%d')
+    cur_year_str = cur_datetime.strftime('%Y')
+    quarter_code = calQuarterCode(cur_datetime)
+    market_event_info = krx.get_market_ticker_and_name(date=cur_date_str, market='ALL')
+
+    for event_code, event_name in market_event_info.iteritems():
+        # fundamental table에서 현재종목의 가장 최근 분기 가져오기.
+        event_info = EventInfo.objects.filter(event_code=event_code)
+        if event_info.count() == 0:
+            logger.info('[manage_fundamental_daily] 종목 정보가 존재하지 않음 event_code = {}, '
+                        'event_name = {}'.format(event_code, event_name))
+            continue
+        recent_quarter = FundamentalInfo.objects.filter(event_info.first().stock_event_id).order('-quarter')[:1]
+
+        start_scan_date = None
+        if recent_quarter.count() == 0: # 등록된 재무정보가 아예없을경우
+            # 가격정보에서 조회한 주가시작날짜를 첫번쨰 조회분기로 지정
+            start_price_info = PriceInfo.objects.filter(stock_event_id=event_info.first().stock_event_id).order('date')[:1]
+
+        DartManager.instance().get_dart().finstate_all(event_name, cur_year_str, quarter_code)
+
+
+def calQuarterCode(date: datetime):
+    quarter = str(math.ceil(datetime.month / 3.0)) + 'Q'
+    if quarter == '1Q':
+        return '11013'
+    elif quarter == '2Q':
+        return '11012'
+    elif quarter == '3Q':
+        return '11014'
+    elif quarter == '4Q':
+        return '11011'
 
 # def manage_event_all():
 #     global first

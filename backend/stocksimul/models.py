@@ -74,10 +74,10 @@ class InfoUpdateStatus(models.Model):
     objects = models.Manager()
 
 
-class fundamentalInfo(models.Model):
+class FundamentalInfo(models.Model):
     fm_info_id = models.AutoField(primary_key=True)
     stock_event_id = models.IntegerField(default=-1)
-    quarter_name = models.IntegerField(default=-1)  # 분기명
+    quarter = models.IntegerField(default=-1)  # 분기명
     stock_tot_co = models.BigIntegerField(default=0)  # 총 발행 주식수
     cap = models.BigIntegerField(default=0)  # 시가총액
     eps = models.IntegerField(default=0)  # 주당순이익
@@ -95,3 +95,5 @@ class fundamentalInfo(models.Model):
     investing_cash_flow = models.BigIntegerField(default=0)  # 투자활동현금흐름
     operating_cash_flow = models.BigIntegerField(default=0)  # 영업활동현금흐름
     financing_cash_flow = models.BigIntegerField(default=0)  # 재무활동현금흐름
+
+    objects = models.Manager()
