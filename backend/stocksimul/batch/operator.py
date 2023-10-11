@@ -2,7 +2,7 @@ from apscheduler.schedulers.background import BackgroundScheduler, BlockingSched
 from apscheduler.triggers.cron import CronTrigger
 from django.conf import settings
 from django_apscheduler.jobstores import DjangoJobStore
-from .stock_data_manage import manage_event_init, manage_event_daily, validate_connection
+from .stock_data_manage import manage_event_init, manage_event_daily, validate_connection, manage_fundamental_daily
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 import traceback
 import datetime
@@ -51,6 +51,9 @@ class operator:
                                    second=daily_batch_time.second,
                                    id='manage_event_daily',
                                    replace_existing=True)
+
+            self.scheduler.add_job(manage_fundamental_daily, 'date', run_date=today_org + datetime.timedelta(seconds=10),
+                                   id='manage_fundamental_daily', replace_existing=True)
 
             self.scheduler.add_job(validate_connection, 'interval', hours=2, id='validate_connection',
                                    replace_existing=True)

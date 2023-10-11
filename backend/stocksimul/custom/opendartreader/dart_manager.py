@@ -1,5 +1,5 @@
-from backend.stocksimul.custom.opendartreader.dart import OpenDartReader
-from backend.stocksimul.common.singleton import SingletonInstance
+from ...custom.opendartreader.dart import OpenDartReader
+from ...common.singleton import SingletonInstance
 
 
 class DartManager(SingletonInstance):

@@ -77,7 +77,7 @@ class InfoUpdateStatus(models.Model):
 class FundamentalInfo(models.Model):
     fm_info_id = models.AutoField(primary_key=True)
     stock_event_id = models.IntegerField(default=-1)
-    quarter = models.IntegerField(default=-1)  # 분기명
+    quarter = models.CharField(max_length=7)  # 분기명
     stock_tot_co = models.BigIntegerField(default=0)  # 총 발행 주식수
     cap = models.BigIntegerField(default=0)  # 시가총액
     eps = models.IntegerField(default=0)  # 주당순이익
@@ -86,6 +86,8 @@ class FundamentalInfo(models.Model):
     pbr = models.FloatField(default=0)
     roe = models.FloatField(default=0)
     profit_loss = models.BigIntegerField(default=0)  # 당기순이익(손실)
+    profit_loss_control = models.BigIntegerField(default=0)  # 당기순이익(손실지배)
+    profit_loss_non_control = models.BigIntegerField(default=0)  # 당기순이익(손실비지배)
     profit_loss_before_tax = models.BigIntegerField(default=0)  # 세전계속사업이익
     assets = models.BigIntegerField(default=0)  # 자산총계
     liabilities = models.BigIntegerField(default=0)  # 부채총계

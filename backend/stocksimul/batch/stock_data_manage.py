@@ -1,7 +1,8 @@
-from ..models import PriceInfo, InfoUpdateStatus, SimulResult, EventInfo, SimulParam, FundamentalInfo
+from ..models import PriceInfo, InfoUpdateStatus, EventInfo, FundamentalInfo
 from pykrx.website import krx
 from pykrx import stock
 from datetime import timedelta, datetime
+from dateutil.relativedelta import relativedelta
 from django.db import transaction
 import time
 import numpy as np
@@ -9,6 +10,7 @@ from numpy.lib import math
 import logging
 from ..config.stockConfig import BATCH_TEST_CODE_YN, BATCH_TEST_CODE_LIST, BATCH_FIRST_INSERT_ALL
 from ..custom.opendartreader.dart_manager import DartManager
+from ..custom.opendartreader.dart_config import DartConfig
 
 '''
 1. api 통신을 통해 현재 마켓에 등록된 종목정보를 모두 받아온다.
@@ -346,37 +348,130 @@ def manage_event_daily():
 def manage_fundamental_daily():
     cur_datetime = datetime.now()
     cur_date_str = cur_datetime.strftime('%Y%m%d')
-    cur_year_str = cur_datetime.strftime('%Y')
-    quarter_code = calQuarterCode(cur_datetime)
+    cur_qt = calQuarter(cur_datetime)
+    # cur_year = cur_datetime.strftime('%Y')
     market_event_info = krx.get_market_ticker_and_name(date=cur_date_str, market='ALL')
 
     for event_code, event_name in market_event_info.iteritems():
+        if BATCH_TEST_CODE_YN:
+            if event_code not in BATCH_TEST_CODE_LIST:
+                continue
+            else:
+                print('TEST : {}/{}'.format(event_code, event_name))
         # fundamental table에서 현재종목의 가장 최근 분기 가져오기.
         event_info = EventInfo.objects.filter(event_code=event_code)
         if event_info.count() == 0:
             logger.info('[manage_fundamental_daily] 종목 정보가 존재하지 않음 event_code = {}, '
                         'event_name = {}'.format(event_code, event_name))
             continue
-        recent_quarter = FundamentalInfo.objects.filter(event_info.first().stock_event_id).order('-quarter')[:1]
+        recent_quarter = FundamentalInfo.objects.filter(stock_event_id=event_info.first().stock_event_id).order_by(
+            '-quarter')[:1]
 
-        start_scan_date = None
-        if recent_quarter.count() == 0: # 등록된 재무정보가 아예없을경우
+        scan_qt = None
+        if recent_quarter.count() == 0:  # 등록된 재무정보가 아예없을경우
             # 가격정보에서 조회한 주가시작날짜를 첫번쨰 조회분기로 지정
-            start_price_info = PriceInfo.objects.filter(stock_event_id=event_info.first().stock_event_id).order('date')[:1]
+            start_price_info = PriceInfo.objects.filter(
+                stock_event_id=event_info.first().stock_event_id).order_by('date')[:1]
+            scan_qt = calQuarter(start_price_info.first().date)
+        else:
+            scan_qt = calNextQuarter(recent_quarter.first().quarter)
 
-        DartManager.instance().get_dart().finstate_all(event_name, cur_year_str, quarter_code)
+        while cur_qt != scan_qt:
+            logger.info('scan_qt = {}'.format(scan_qt))
+            scan_date = datetime.strptime(scan_qt, '%Y%m')
+            quarter_code = calQuarterCode(scan_date)
+            finstate = DartManager.instance().get_dart().finstate_all(event_name, scan_date.year, quarter_code)
+            logger.info('finstate = {}'.format(finstate))
+            if finstate is not None:
+                assets = int(finstate.loc[DartConfig().assets_condition(finstate)].iloc[0][DartConfig().column_amount])
+                liabilities = int(
+                    finstate.loc[DartConfig().liabilities_condition(finstate)].iloc[0][DartConfig().column_amount])
+                equity = int(finstate.loc[DartConfig().equity_condition(finstate)].iloc[0][DartConfig().column_amount])
+                revenue = int(
+                    finstate.loc[DartConfig().revenue_condition(finstate)].iloc[0][DartConfig().column_amount])
+                profit_loss = int(
+                    finstate.loc[DartConfig().profit_loss_condition(finstate)].iloc[0][DartConfig().column_amount])
+                operating_income_loss = int(
+                    finstate.loc[DartConfig().operating_income_loss_condition(finstate)].iloc[0][
+                        DartConfig().column_amount])
+                profit_loss_control = int(finstate.loc[DartConfig().profit_loss_control_condition(finstate)].iloc[0][
+                                              DartConfig().column_amount])
+                profit_loss_non_control = int(
+                    finstate.loc[DartConfig().profit_loss_non_control_condition(finstate)].iloc[0][
+                        DartConfig().column_amount])
+                profit_loss_before_tax = int(
+                    finstate.loc[DartConfig().profit_loss_before_tax_condition(finstate)].iloc[0][
+                        DartConfig().column_amount])
+                eps = int(finstate.loc[DartConfig().eps_condition(finstate)].iloc[0][DartConfig().column_amount])
+                investing_cash_flow = int(finstate.loc[DartConfig().investing_cash_flow_condition(finstate)].iloc[0][
+                                              DartConfig().column_amount])
+                operating_cash_flow = int(finstate.loc[DartConfig().operating_cash_flow_condition(finstate)].iloc[0][
+                                              DartConfig().column_amount])
+                financing_cash_flow = int(finstate.loc[DartConfig().financing_cash_flow_condition(finstate)].iloc[0][
+                                              DartConfig().column_amount])
+
+                if quarter_code == '11011':  # 사업보고서의 경우 1,2,3분기를 합산한 금액을 감액해야 4분기 계산가능
+                    recent_quarter = FundamentalInfo.objects.filter(stock_event_id=event_info.first().stock_event_id) \
+                        .filter(quarter__startswith=str(scan_date.year))
+                    for item in recent_quarter:
+                        assets -= item.assets
+                        liabilities -= item.liabilities
+                        equity -= item.equity
+                        revenue -= item.revenue
+                        operating_income_loss -= item.operating_income_loss
+                        profit_loss -= item.profit_loss
+                        profit_loss_control -= item.profit_loss_control
+                        profit_loss_non_control -= item.profit_loss_non_control
+                        profit_loss_before_tax -= item.profit_loss_before_tax
+                        eps -= item.eps
+                        investing_cash_flow -= item.investing_cash_flow
+                        operating_cash_flow -= item.operating_cash_flow
+                        financing_cash_flow -= item.financing_cash_flow
+
+                entry = FundamentalInfo(**{'stock_event_id': event_info.first().stock_event_id, 'quarter': scan_qt,
+                                           'assets': assets, 'liabilities': liabilities, 'equity': equity,
+                                           'revenue': revenue, 'operating_income_loss': operating_income_loss,
+                                           'profit_loss': profit_loss, 'profit_loss_control': profit_loss_control,
+                                           'profit_loss_non_control': profit_loss_non_control,
+                                           'profit_loss_before_tax': profit_loss_before_tax, 'eps': eps,
+                                           'investing_cash_flow': investing_cash_flow,
+                                           'operating_cash_flow': operating_cash_flow,
+                                           'financing_cash_flow': financing_cash_flow})
+                entry.save()
+            # 다음 분기 계산
+            scan_qt = calNextQuarter(scan_qt)
 
 
-def calQuarterCode(date: datetime):
-    quarter = str(math.ceil(datetime.month / 3.0)) + 'Q'
-    if quarter == '1Q':
+def calQuarter(quarter_date):
+    quarter = str(math.ceil(quarter_date.month / 3.0))
+    quarter_month = None
+    if quarter == '1':
+        quarter_month = '03'
+    elif quarter == '2':
+        quarter_month = '06'
+    elif quarter == '3':
+        quarter_month = '09'
+    elif quarter == '4':
+        quarter_month = '12'
+    return str(quarter_date.year)+quarter_month
+
+
+def calQuarterCode(quarter_date):
+    quarter = str(math.ceil(quarter_date.month / 3.0))
+    if quarter == '1':
         return '11013'
-    elif quarter == '2Q':
+    elif quarter == '2':
         return '11012'
-    elif quarter == '3Q':
+    elif quarter == '3':
         return '11014'
-    elif quarter == '4Q':
+    elif quarter == '4':
         return '11011'
+
+
+def calNextQuarter(qt):
+    qt_origin = datetime.strptime(qt, '%Y%m')
+    next_qt = qt_origin + relativedelta(months=3)
+    return next_qt.strftime('%Y%m')
 
 # def manage_event_all():
 #     global first
