@@ -11,7 +11,7 @@ class DartConfig:
     table_type_cis = 'CIS'  # 포괄손익계산서
     table_type_cf = 'CF'  # 현금흐름표
 
-    assets_id_list = ['ifrs-full_CurrentAssets', 'ifrs_Assets']  # 자산총계
+    assets_id_list = ['ifrs-full_Assets', 'ifrs_Assets']  # 자산총계
     liabilities_id_list = ['ifrs-full_Liabilities', 'ifrs_Liabilities']  # 부채총계
     equity_id_list = ['ifrs-full_Equity', 'ifrs_Equity']  # 자본총계
     revenue_id_list = ['ifrs-full_Revenue', 'ifrs_Revenue']  # 수익(매출액)

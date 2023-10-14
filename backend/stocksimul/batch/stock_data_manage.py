@@ -346,12 +346,20 @@ def manage_event_daily():
 
 
 def manage_fundamental_daily():
+    logger.info('[manage_fundamental_daily] start')
     cur_datetime = datetime.now()
     cur_date_str = cur_datetime.strftime('%Y%m%d')
     cur_qt = calQuarter(cur_datetime)
     # cur_year = cur_datetime.strftime('%Y')
-    market_event_info = krx.get_market_ticker_and_name(date=cur_date_str, market='ALL')
-
+    start_get_market = datetime.now()
+    market_event_info = None
+    try:
+        market_event_info = krx.get_market_ticker_and_name(date=cur_date_str, market='ALL')
+    except Exception as e:
+        logger.error('[manage_fundamental_daily] error occurred.')
+    end_get_market = datetime.now()
+    logger.info('get market ticket time = {}'.format(end_get_market-start_get_market))
+    logger.info('market event info count={}'.format(len(market_event_info)))
     for event_code, event_name in market_event_info.iteritems():
         if BATCH_TEST_CODE_YN:
             if event_code not in BATCH_TEST_CODE_LIST:
@@ -377,69 +385,93 @@ def manage_fundamental_daily():
             scan_qt = calNextQuarter(recent_quarter.first().quarter)
 
         while cur_qt != scan_qt:
-            logger.info('scan_qt = {}'.format(scan_qt))
+            logger.info('scan_qt={}'.format(scan_qt))
             scan_date = datetime.strptime(scan_qt, '%Y%m')
             quarter_code = calQuarterCode(scan_date)
             finstate = DartManager.instance().get_dart().finstate_all(event_name, scan_date.year, quarter_code)
-            logger.info('finstate = {}'.format(finstate))
+            # logger.info('finstate = {}'.format(finstate))
             if finstate is not None:
-                assets = int(finstate.loc[DartConfig().assets_condition(finstate)].iloc[0][DartConfig().column_amount])
-                liabilities = int(
-                    finstate.loc[DartConfig().liabilities_condition(finstate)].iloc[0][DartConfig().column_amount])
-                equity = int(finstate.loc[DartConfig().equity_condition(finstate)].iloc[0][DartConfig().column_amount])
-                revenue = int(
-                    finstate.loc[DartConfig().revenue_condition(finstate)].iloc[0][DartConfig().column_amount])
-                profit_loss = int(
-                    finstate.loc[DartConfig().profit_loss_condition(finstate)].iloc[0][DartConfig().column_amount])
-                operating_income_loss = int(
-                    finstate.loc[DartConfig().operating_income_loss_condition(finstate)].iloc[0][
-                        DartConfig().column_amount])
-                profit_loss_control = int(finstate.loc[DartConfig().profit_loss_control_condition(finstate)].iloc[0][
-                                              DartConfig().column_amount])
-                profit_loss_non_control = int(
-                    finstate.loc[DartConfig().profit_loss_non_control_condition(finstate)].iloc[0][
-                        DartConfig().column_amount])
-                profit_loss_before_tax = int(
-                    finstate.loc[DartConfig().profit_loss_before_tax_condition(finstate)].iloc[0][
-                        DartConfig().column_amount])
-                eps = int(finstate.loc[DartConfig().eps_condition(finstate)].iloc[0][DartConfig().column_amount])
-                investing_cash_flow = int(finstate.loc[DartConfig().investing_cash_flow_condition(finstate)].iloc[0][
-                                              DartConfig().column_amount])
-                operating_cash_flow = int(finstate.loc[DartConfig().operating_cash_flow_condition(finstate)].iloc[0][
-                                              DartConfig().column_amount])
-                financing_cash_flow = int(finstate.loc[DartConfig().financing_cash_flow_condition(finstate)].iloc[0][
-                                              DartConfig().column_amount])
-
-                if quarter_code == '11011':  # 사업보고서의 경우 1,2,3분기를 합산한 금액을 감액해야 4분기 계산가능
+                try:
+                    assets = int(
+                        finstate.loc[DartConfig().assets_condition(finstate)].iloc[0][DartConfig().column_amount])
+                    liabilities = int(
+                        finstate.loc[DartConfig().liabilities_condition(finstate)].iloc[0][DartConfig().column_amount])
+                    equity = int(
+                        finstate.loc[DartConfig().equity_condition(finstate)].iloc[0][DartConfig().column_amount])
+                    revenue = int(
+                        finstate.loc[DartConfig().revenue_condition(finstate)].iloc[0][DartConfig().column_amount])
+                    profit_loss = int(
+                        finstate.loc[DartConfig().profit_loss_condition(finstate)].iloc[0][DartConfig().column_amount])
+                    operating_income_loss = int(
+                        finstate.loc[DartConfig().operating_income_loss_condition(finstate)].iloc[0][
+                            DartConfig().column_amount])
+                    profit_loss_control = int(
+                        finstate.loc[DartConfig().profit_loss_control_condition(finstate)].iloc[0][
+                            DartConfig().column_amount])
+                    profit_loss_non_control = int(
+                        finstate.loc[DartConfig().profit_loss_non_control_condition(finstate)].iloc[0][
+                            DartConfig().column_amount])
+                    profit_loss_before_tax = int(
+                        finstate.loc[DartConfig().profit_loss_before_tax_condition(finstate)].iloc[0][
+                            DartConfig().column_amount])
+                    eps = int(finstate.loc[DartConfig().eps_condition(finstate)].iloc[0][DartConfig().column_amount])
+                    investing_cash_flow = int(
+                        finstate.loc[DartConfig().investing_cash_flow_condition(finstate)].iloc[0][
+                            DartConfig().column_amount])
+                    operating_cash_flow = int(
+                        finstate.loc[DartConfig().operating_cash_flow_condition(finstate)].iloc[0][
+                            DartConfig().column_amount])
+                    financing_cash_flow = int(
+                        finstate.loc[DartConfig().financing_cash_flow_condition(finstate)].iloc[0][
+                            DartConfig().column_amount])
                     recent_quarter = FundamentalInfo.objects.filter(stock_event_id=event_info.first().stock_event_id) \
                         .filter(quarter__startswith=str(scan_date.year))
-                    for item in recent_quarter:
-                        assets -= item.assets
-                        liabilities -= item.liabilities
-                        equity -= item.equity
-                        revenue -= item.revenue
-                        operating_income_loss -= item.operating_income_loss
-                        profit_loss -= item.profit_loss
-                        profit_loss_control -= item.profit_loss_control
-                        profit_loss_non_control -= item.profit_loss_non_control
-                        profit_loss_before_tax -= item.profit_loss_before_tax
-                        eps -= item.eps
-                        investing_cash_flow -= item.investing_cash_flow
-                        operating_cash_flow -= item.operating_cash_flow
-                        financing_cash_flow -= item.financing_cash_flow
+                    logger.info('get recent qt count={}'.format(recent_quarter.count()))
+                    if quarter_code == '11011':  # 사업보고서의 경우 1,2,3분기를 합산한 금액을 감액해야 4분기 계산가능
+                        for item in recent_quarter:
+                            if not item.quarter.endswith('12'):
+                                revenue -= item.revenue
+                                operating_income_loss -= item.operating_income_loss
+                                profit_loss -= item.profit_loss
+                                profit_loss_control -= item.profit_loss_control
+                                profit_loss_non_control -= item.profit_loss_non_control
+                                profit_loss_before_tax -= item.profit_loss_before_tax
+                                eps -= item.eps
+                                investing_cash_flow -= item.investing_cash_flow
+                                operating_cash_flow -= item.operating_cash_flow
+                                financing_cash_flow -= item.financing_cash_flow
 
-                entry = FundamentalInfo(**{'stock_event_id': event_info.first().stock_event_id, 'quarter': scan_qt,
-                                           'assets': assets, 'liabilities': liabilities, 'equity': equity,
-                                           'revenue': revenue, 'operating_income_loss': operating_income_loss,
-                                           'profit_loss': profit_loss, 'profit_loss_control': profit_loss_control,
-                                           'profit_loss_non_control': profit_loss_non_control,
-                                           'profit_loss_before_tax': profit_loss_before_tax, 'eps': eps,
-                                           'investing_cash_flow': investing_cash_flow,
-                                           'operating_cash_flow': operating_cash_flow,
-                                           'financing_cash_flow': financing_cash_flow})
-                entry.save()
+                    if quarter_code == '11012':  # 2분기 현금흐름 계산
+                        for item in recent_quarter:
+                            if item.quarter.endswith('03'):
+                                investing_cash_flow -= item.investing_cash_flow
+                                operating_cash_flow -= item.operating_cash_flow
+                                financing_cash_flow -= item.financing_cash_flow
+
+                    if quarter_code == '11014':  # 3분기 현금흐름 계산
+                        for item in recent_quarter:
+                            if item.quarter.endswith('03') or item.quarter.endswith('06'):
+                                investing_cash_flow -= item.investing_cash_flow
+                                operating_cash_flow -= item.operating_cash_flow
+                                financing_cash_flow -= item.financing_cash_flow
+
+                    entry = FundamentalInfo(**{'stock_event_id': event_info.first().stock_event_id, 'quarter': scan_qt,
+                                               'assets': assets, 'liabilities': liabilities, 'equity': equity,
+                                               'revenue': revenue, 'operating_income_loss': operating_income_loss,
+                                               'profit_loss': profit_loss, 'profit_loss_control': profit_loss_control,
+                                               'profit_loss_non_control': profit_loss_non_control,
+                                               'profit_loss_before_tax': profit_loss_before_tax, 'eps': eps,
+                                               'investing_cash_flow': investing_cash_flow,
+                                               'operating_cash_flow': operating_cash_flow,
+                                               'financing_cash_flow': financing_cash_flow})
+                    entry.save()
+                except Exception as e:
+                    logger.exception(
+                        '[manage_fundamental_daily] error occured. event_name = {} / event_code = {} / scan_qt={}'.format(
+                            event_name, event_code, scan_qt))
             # 다음 분기 계산
             scan_qt = calNextQuarter(scan_qt)
+            time.sleep(0.2)
 
 
 def calQuarter(quarter_date):
@@ -453,7 +485,7 @@ def calQuarter(quarter_date):
         quarter_month = '09'
     elif quarter == '4':
         quarter_month = '12'
-    return str(quarter_date.year)+quarter_month
+    return str(quarter_date.year) + quarter_month
 
 
 def calQuarterCode(quarter_date):
@@ -472,6 +504,12 @@ def calNextQuarter(qt):
     qt_origin = datetime.strptime(qt, '%Y%m')
     next_qt = qt_origin + relativedelta(months=3)
     return next_qt.strftime('%Y%m')
+
+
+def calBeforeQuarter(qt):
+    qt_origin = datetime.strptime(qt, '%Y%m')
+    before_qt = qt_origin - relativedelta(months=3)
+    return before_qt.strftime('%Y%m')
 
 # def manage_event_all():
 #     global first
