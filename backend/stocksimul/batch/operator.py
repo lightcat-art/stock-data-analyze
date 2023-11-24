@@ -48,11 +48,11 @@ class operator:
                     datetime.date(today_org.year, today_org.month, today_org.day),
                     datetime.time(BATCH_HOUR, BATCH_MIN, BATCH_SEC))
 
-            # self.scheduler.add_job(manage_event_daily, 'cron', hour=daily_batch_time.hour,
-            #                        minute=daily_batch_time.minute,
-            #                        second=daily_batch_time.second,
-            #                        id='manage_event_daily',
-            #                        replace_existing=True)
+            self.scheduler.add_job(manage_event_daily, 'cron', hour=daily_batch_time.hour,
+                                   minute=daily_batch_time.minute,
+                                   second=daily_batch_time.second,
+                                   id='manage_event_daily',
+                                   replace_existing=True)
 
             # The 'date' trigger and datetime.now() as run_date are implicit
             self.scheduler.add_job(manage_event_init_etc, 'date', run_date=today_org + datetime.timedelta(seconds=30),
@@ -72,9 +72,9 @@ class operator:
                                    id='manage_event_daily_etc',
                                    replace_existing=True)
 
-            # self.scheduler.add_job(manage_fundamental_daily, 'date',
-            #                        run_date=today_org + datetime.timedelta(seconds=10),
-            #                        id='manage_fundamental_daily', replace_existing=True)
+            self.scheduler.add_job(manage_fundamental_daily, 'date',
+                                   run_date=today_org + datetime.timedelta(seconds=10),
+                                   id='manage_fundamental_daily', replace_existing=True)
 
             self.scheduler.add_job(validate_connection, 'interval', hours=2, id='validate_connection',
                                    replace_existing=True)
