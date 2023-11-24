@@ -61,6 +61,26 @@ class PriceInfo(models.Model):
         indexes = [models.Index(fields=['stock_event_id'])]
 
 
+class NotAdjPriceInfo(models.Model):
+    not_adj_price_id = models.BigAutoField(primary_key=True)
+    stock_event_id = models.IntegerField(default=-1)
+    date = models.DateField()
+    open = models.IntegerField(default=-1, null=True)
+    close = models.IntegerField(default=-1, null=True)
+    high = models.IntegerField(default=-1, null=True)
+    low = models.IntegerField(default=-1, null=True)
+    volume = models.IntegerField(default=-1, null=True)
+    value = models.BigIntegerField(default=-1, null=True)
+    up_down_rate = models.FloatField(default=0, null=True)
+    market_cap = models.BigIntegerField(default=-1, null=True)
+    listed_shares = models.BigIntegerField(default=-1, null=True)
+
+    objects = models.Manager()
+
+    class Meta:
+        indexes = [models.Index(fields=['stock_event_id'])]
+
+
 class InfoUpdateStatus(models.Model):
     stock_info_update_status_id = models.AutoField(primary_key=True)
     table_type = models.CharField(max_length=1)  # 'P' : 주가테이블, 'E' : 종목코드테이블

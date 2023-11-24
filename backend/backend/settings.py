@@ -102,6 +102,14 @@ DATABASES = {
         'HOST': '172.21.0.30',  # IP
         'PORT': '3306'  # PORT
     },
+    'mysql-docker-out': {
+        'ENGINE': 'django.db.backends.mysql',  # 사용할 DB 종류
+        'NAME': 'stock',  # DB 이름
+        'USER': 'stock',  # DB 계정 이름
+        'PASSWORD': 'stock',  # DB 계정 패스워드
+        'HOST': 'localhost',  # IP
+        'PORT': '4306'  # PORT
+    },
     'sqlite3': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',

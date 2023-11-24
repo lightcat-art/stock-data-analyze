@@ -1,4 +1,4 @@
-from ..models import PriceInfo, InfoUpdateStatus, EventInfo, FundamentalInfo
+from ..models import PriceInfo, InfoUpdateStatus, EventInfo, FundamentalInfo, NotAdjPriceInfo
 from pykrx.website import krx
 from pykrx import stock
 from datetime import timedelta, datetime
@@ -8,9 +8,11 @@ import time
 import numpy as np
 from numpy.lib import math
 import logging
-from ..config.stockConfig import BATCH_TEST_CODE_YN, BATCH_TEST_CODE_LIST, BATCH_FIRST_INSERT_ALL
+from ..config.stockConfig import BATCH_TEST_CODE_YN, BATCH_TEST_CODE_LIST, BATCH_FIRST_INSERT_ALL, \
+    ETC_BATCH_TEST_CODE_YN, ETC_BATCH_TEST_CODE_LIST, ETC_FIRST_BATCH_TODATE
 from ..custom.opendartreader.dart_manager import DartManager
 from ..custom.opendartreader.dart_config import DartConfig
+from ..custom import pykrx as stock_custom
 
 '''
 1. api 통신을 통해 현재 마켓에 등록된 종목정보를 모두 받아온다.
@@ -28,7 +30,8 @@ from ..custom.opendartreader.dart_config import DartConfig
 ps. 
 * 장 시작 전에는 시가,고가,종가,저가 가 모두 0으로 조회됨.
 '''
-first = False  # 첫 insert 진행중 여부
+first = False  # naver api 첫 insert 진행중 여부
+etc_first = False  # krx api 첫 insert 진행중 여부
 
 logger = logging.getLogger('batch')
 
@@ -89,7 +92,8 @@ def manage_event_init():
                 # 기존 등록된 종목인지 확인.
                 event_info = EventInfo.objects.filter(event_code=event_code)
                 if event_info.count() != 0:
-                    event_status = InfoUpdateStatus.objects.filter(stock_event_id=event_info.first().stock_event_id)
+                    event_status = InfoUpdateStatus.objects.filter(stock_event_id=event_info.first().stock_event_id) \
+                        .filter(table_type='P')
                     if event_status.count() != 0:  # 이미 등록된 것이면 스킵.
                         logger.info('{} already inserted. skip inserting.'.format(item['event_code']))
                         continue
@@ -135,7 +139,7 @@ def manage_event_init():
                 end_insert_market_data = datetime.now().timestamp()
                 insert_market_data_time_taken += (end_insert_market_data - end_get_market_data)
 
-                status_dict = {'table_type': 'P', 'mod_dt': datetime.now(), 'reg_dt': datetime.now(),
+                status_dict = {'table_type': 'P', 'mod_dt': today_org, 'reg_dt': today_org,
                                'stock_event_id': event_info.first().stock_event_id}
                 event_status_insert = InfoUpdateStatus(**status_dict)
                 event_status_insert.save()
@@ -175,16 +179,16 @@ def manage_event_daily():
                 # price_info_df = price_info.reset_index() # 종목코드를 컬럼으로 빼기.
                 price_info_df.rename(
                     columns={'티커': 'event_code', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
-                             '저가': 'low',
-                             '거래대금': 'value', '등락률': 'up_down_rate'}, inplace=True)
+                             '저가': 'low', '거래대금': 'value', '등락률': 'up_down_rate'}, inplace=True)
                 price_info_df['date'] = datetime.now()
 
                 # if not holiday:
                 new_event_result = {}
                 del_event_result = []
                 # delete 항목을 따로 나중에 제외시키기 위해 현재 등록되어있는 종목 미리 모두 다 넣어둠.
-                for cur_event in cur_event_info:
-                    del_event_result.append(cur_event.event_code)
+                if len(market_event_info) != 0:
+                    for cur_event in cur_event_info:
+                        del_event_result.append(cur_event.event_code)
                 # 등록되어있는 종목, 신규종목, 삭제될 종목 구분.
                 for market_event_code, market_event_name in market_event_info.iteritems():
                     code_exist = False
@@ -194,15 +198,12 @@ def manage_event_daily():
                         if cur_event.event_code == market_event_code:
                             code_exist = True
                             # event_result['exist'].append(item['event_code'])
-                            # 현재 시장에서 존재하는 종목이 db에서 존재한다면 그 외에는 모두 삭제될 종목이라는 점을 이용하여 필터링.
+                            # DB 에서 존재하는 종목 중 시장에서 존재하는 종목 말고는 모두 제거되어야 하는 종목임.
                             del_event_result.remove(market_event_code)
 
                     if not code_exist:
                         code_new = True
                         new_event_result.update({market_event_code: market_event_name})
-
-                # 삭제 종목 관리
-                del_event_id_list = []
 
                 for delete_event_code in del_event_result:
                     with transaction.atomic():
@@ -220,7 +221,8 @@ def manage_event_daily():
                             del_event_price.delete()
 
                             # 관리상태정보 삭제
-                            del_event_status = InfoUpdateStatus.objects.filter(stock_event_id=del_event_id)
+                            del_event_status = InfoUpdateStatus.objects.filter(stock_event_id=del_event_id) \
+                                .filter(table_type='P')
                             del_event_status.delete()
 
                 # stockevent 테이블 업데이트 - 신규 종목
@@ -253,56 +255,47 @@ def manage_event_daily():
                             continue
                         logger.debug('기존/신규종목 UPDATE : {} / {}'.format(k, event_info.first().event_name))
 
-                        if new_event_yn:  # 신규종목이면 현재까지의 모든 정보 insert
-                            price_info_df = stock.get_market_ohlcv_by_date(fromdate='19000101', todate=today,
-                                                                           ticker=k)
-                            price_info_df = price_info_df.replace({np.nan: None})
-                            price_info_df = price_info_df.reset_index()
-                            price_info_df.rename(
-                                columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
-                                         '저가': 'low',
-                                         '거래대금': 'value', '등락률': 'up_down_rate'},
-                                inplace=True)
-                            # stockprice 테이블에 insert
-                            with transaction.atomic():
-                                for priceitem in price_info_df.to_dict('records'):
-                                    if priceitem['open'] != 0 and priceitem['high'] != 0 \
-                                            and priceitem['low'] != 0 and priceitem['close'] != 0:
-                                        entry = PriceInfo(**priceitem)
-                                        entry.stock_event_id = event_info.first().stock_event_id
-                                        entry.save()
+                        fromdate = None
+                        before_insert_yn = False  # 누락된 경우 또는 신규종목일경우에 이전날짜 업데이트 여부
+                        if new_event_yn:  # 신규종목이면 실행날짜 이전까지의 모든 정보 insert
+                            fromdate = '19000101'
+                            before_insert_yn = True
                         else:  # 기존종목이면 updateStatus를 확인하여 누락된 경우를 체크 후 INSERT 및 UPDATE
                             event_status = InfoUpdateStatus.objects.filter(
-                                stock_event_id=event_info.first().stock_event_id)
+                                stock_event_id=event_info.first().stock_event_id).filter(table_type='P')
 
                             if (today_org - timedelta(
                                     days=1)).date() > event_status.first().mod_dt:  # 실행날짜를 제외하고 1일이상 누락된 경우
                                 logger.debug('실행날짜를 제외하고 1일이상 누락된 경우')
                                 # 실행날짜를 제외한 업데이트 빠진 기간 insert
                                 fromdate = (event_status.first().mod_dt + timedelta(days=1)).strftime('%Y%m%d')
-                                todate = (today_org - timedelta(days=1)).strftime('%Y%m%d')
-                                omit_price_info_df = stock.get_market_ohlcv_by_date(fromdate=fromdate,
-                                                                                    todate=todate,
-                                                                                    ticker=k)
-                                if len(omit_price_info_df) != 0:  # 휴일에 의한 업데이트 시간차 발생 경우 제외
-                                    omit_price_info_df = omit_price_info_df.reset_index()
-                                    omit_price_info_df.rename(
-                                        columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume',
-                                                 '고가': 'high',
-                                                 '저가': 'low',
-                                                 '거래대금': 'value', '등락률': 'up_down_rate'},
-                                        inplace=True)
-                                    with transaction.atomic():
-                                        for price_item in omit_price_info_df.to_dict('records'):
-                                            # 종목이 비활성화된것으로 간주
-                                            if price_item['open'] != 0 and price_item['high'] != 0 \
-                                                    and price_item['low'] != 0 and price_item['close'] != 0:
-                                                entry = PriceInfo(**price_item)
-                                                entry.stock_event_id = event_info.first().stock_event_id
-                                                entry.save()
-                                logger.info('{} : updating omitted informations complete'.format(k))
+                                before_insert_yn = True
 
-                            if not holiday:
+                        if before_insert_yn:
+                            todate = (today_org - timedelta(days=1)).strftime('%Y%m%d')
+                            omit_price_info_df = stock.get_market_ohlcv_by_date(fromdate=fromdate,
+                                                                                todate=todate,
+                                                                                ticker=k)
+                            if len(omit_price_info_df) != 0:  # 휴일에 의한 업데이트 시간차 발생 경우 제외
+                                omit_price_info_df = omit_price_info_df.reset_index()
+                                omit_price_info_df.rename(
+                                    columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume',
+                                             '고가': 'high', '저가': 'low', '거래대금': 'value', '등락률': 'up_down_rate'},
+                                    inplace=True)
+                                with transaction.atomic():
+                                    for price_item in omit_price_info_df.to_dict('records'):
+                                        # 종목이 비활성화된것으로 간주되면 NO INSERT
+                                        if price_item['open'] != 0 and price_item['high'] != 0 \
+                                                and price_item['low'] != 0 and price_item['close'] != 0:
+                                            entry = PriceInfo(**price_item)
+                                            entry.stock_event_id = event_info.first().stock_event_id
+                                            entry.save()
+                            logger.info('{} : updating omitted informations complete'.format(k))
+
+                        if not holiday:
+                            if not new_event_yn:
+                                event_status = InfoUpdateStatus.objects.filter(
+                                    stock_event_id=event_info.first().stock_event_id).filter(table_type='P')
                                 if event_status.first().mod_dt.strftime('%Y%m%d') == today:
                                     logger.info('금일 주가 UPDATE : code = {}'.format(k))
                                     # 장 끝난 시점에 하루에 한번만 업데이트하는거면 스킵하고, 하루에 여러번 업데이트하는거면 해당날짜의 주가 계속 받아와서 업데이트해야함.
@@ -317,17 +310,17 @@ def manage_event_daily():
                                     today_event_info.value = v['value']
                                     today_event_info.up_down_rate = v['up_down_rate']
                                     today_event_info.update()
-                                # 종목이 비활성화된것으로 간주되면 NO INSERT
-                                elif v['open'] != 0 and v['high'] != 0 and v['low'] != 0 and v['close'] != 0:
-                                    logger.info('금일 주가 INSERT : code=' + k, )
-                                    entry = PriceInfo(**v)
-                                    entry.stock_event_id = event_info.first().stock_event_id
-                                    entry.save()
+                            # 종목이 비활성화된것으로 간주되면 NO INSERT
+                            elif v['open'] != 0 and v['high'] != 0 and v['low'] != 0 and v['close'] != 0:
+                                logger.info('금일 주가 INSERT : code=' + k, )
+                                entry = PriceInfo(**v)
+                                entry.stock_event_id = event_info.first().stock_event_id
+                                entry.save()
 
                         event_status = InfoUpdateStatus.objects.filter(
-                            stock_event_id=event_info.first().stock_event_id)
+                            stock_event_id=event_info.first().stock_event_id).filter(table_type='P')
                         if len(event_status) == 0:
-                            status_dict = {'table_type': 'P', 'mod_dt': datetime.now(), 'reg_dt': datetime.now(),
+                            status_dict = {'table_type': 'P', 'mod_dt': today_org, 'reg_dt': today_org,
                                            'stock_event_id': event_info.first().stock_event_id}
                             event_status_insert = InfoUpdateStatus(**status_dict)
                             event_status_insert.save()
@@ -345,133 +338,286 @@ def manage_event_daily():
         logger.exception('[manage_event_daily] error occured')
 
 
+# 시가총액과 상장주식수에 대해 종목별 UPDATE
+def manage_event_init_etc():
+    try:
+        global first
+        global etc_first
+        while first:
+            time.sleep(10)
+            logger.info('[manage_event_init_etc] waiting for manage_event_init to compelete')
+        if not first:
+            logger.info('[manage_event_init_etc] start')
+            todate = ETC_FIRST_BATCH_TODATE
+            todate_org = datetime.strptime(todate, '%Y%m%d')
+            etc_first = True
+            cur_event_info = EventInfo.objects.all()
+            for cur_event in cur_event_info:
+                if ETC_BATCH_TEST_CODE_YN:
+                    if cur_event.event_code not in ETC_BATCH_TEST_CODE_LIST:
+                        continue
+                # 기존 등록된 종목인지 확인.
+                event_status = InfoUpdateStatus.objects.filter(stock_event_id=cur_event.stock_event_id) \
+                    .filter(table_type='N')
+                if event_status.count() != 0:  # 이미 등록된 것이면 스킵.
+                    logger.info('{} already inserted. skip inserting.'.format(cur_event.event_code))
+                    continue
+                else:  # 종목정보 INSERT 중, 비정상종료된 케이스로 간주하고 해당 종목정보들 삭제 후 재등록
+                    logger.info(
+                        '{} already inserted. but not completed. delete and re-insert.'.format(cur_event.event_code))
+                    not_adj_price = NotAdjPriceInfo.objects.filter(stock_event_id=cur_event.stock_event_id)
+                    not_adj_price.delete()
+
+                # price_info 테이블에서 주가 시작날짜 조회
+                start_price_info = PriceInfo.objects.filter(
+                    stock_event_id=cur_event.stock_event_id).order_by('date')[:1]
+                fromdate = start_price_info.first().date.strftime('%Y%m%d')
+                not_adj_price_info = stock_custom.get_market_ohlcv_by_date(fromdate=fromdate, todate=todate,
+                                                                           ticker=cur_event.event_code)
+                if len(not_adj_price_info) == 0:
+                    continue
+
+                not_adj_price_info = not_adj_price_info.replace({np.nan: None})
+
+                not_adj_price_info = not_adj_price_info.reset_index()
+                not_adj_price_info.rename(
+                    columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high', '저가': 'low',
+                             '거래대금': 'value', '등락률': 'up_down_rate',
+                             '시가총액': 'market_cap', '상장주식수': 'listed_shares'},
+                    inplace=True)
+                # stockprice 테이블에 insert
+                with transaction.atomic():
+                    for price_item in not_adj_price_info.to_dict('records'):
+                        if price_item['open'] != 0 and price_item['high'] != 0 \
+                                and price_item['low'] != 0 and price_item['close'] != 0:
+                            entry = NotAdjPriceInfo(**price_item)
+                            entry.stock_event_id = cur_event.stock_event_id
+                            entry.save()
+
+                status_dict = {'table_type': 'N', 'mod_dt': todate_org, 'reg_dt': todate_org,
+                               'stock_event_id': cur_event.stock_event_id}
+                event_status_insert = InfoUpdateStatus(**status_dict)
+                event_status_insert.save()
+        else:
+            logger.info('[manage_event_init_etc] manage_event_init executed. skip init_etc')
+
+    except Exception as e:
+        logger.exception('[manage_event_init_etc] error occured')
+    finally:
+        etc_first = False
+
+
+def manage_event_daily_etc():
+    global first
+    global etc_first
+
+    if not first and not etc_first:
+        today_org = datetime.now()
+        today = today_org.strftime('%Y%m%d')
+
+        cur_event_info = EventInfo.objects.all()
+        cur_event_info_list = []
+        for cur_event in cur_event_info:
+            cur_event_info_list.append(cur_event.stock_event_id)
+
+        not_adj_event_id_list = NotAdjPriceInfo.objects.distinct().values_list('stock_event_id')
+        for not_adj_event_tuple in not_adj_event_id_list:
+            not_adj_event_id = not_adj_event_tuple[0]  # distinct를 이용하면 결과값이 tuple이 된다. 그중 처음값 이용.
+            if not_adj_event_id not in cur_event_info_list:
+                # 현재 DB 종목리스트에 등록되어있는 종목이 아니라면 삭제하기
+                not_adj_delete_event = NotAdjPriceInfo.objects.filter(stock_event_id=not_adj_event_id)
+                not_adj_delete_event.delete()
+                continue
+
+        # 마지막으로 일괄처리된 날짜 조회하여 해당날짜 이후부터 INSERT
+        event_status = InfoUpdateStatus.objects.filter(table_type='N').distinct().values_list('mod_dt').order_by(
+            'mod_dt')[:1]
+
+        # omit_yn = False
+        # if (today_org - timedelta(days=1)).date() > event_status.first().mod_dt.date():
+        #     omit_yn = True
+        # if omit_yn:
+
+        # 안정성을 위해 해당날짜 이후 데이터 일괄 삭제 후 RE-INSERT
+        not_adj_delete_by_date = NotAdjPriceInfo.objects.filter(
+            date__range=[event_status.first()[0] + timedelta(days=1), today_org])
+        not_adj_delete_by_date.delete()
+        scan_date = event_status.first()[0]
+        while scan_date != today_org.date():
+            scan_date += timedelta(days=1)
+            scan_date_str = scan_date.strftime('%Y%m%d')
+            not_adj_price_info = stock_custom.get_market_ohlcv_by_ticker(date=scan_date_str, market="ALL")
+            holiday = (not_adj_price_info[['시가', '고가', '저가', '종가']] == 0).all(axis=None)
+            if holiday:
+                continue
+            not_adj_price_info.rename(
+                columns={'티커': 'event_code', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
+                         '저가': 'low', '거래대금': 'value', '등락률': 'up_down_rate',
+                         '시가총액': 'market_cap', '상장주식수': 'listed_shares'}, inplace=True)
+            not_adj_price_info['date'] = scan_date
+
+            with transaction.atomic():
+                for k, v in not_adj_price_info.to_dict('index').items():
+                    if ETC_BATCH_TEST_CODE_YN:
+                        if k not in ETC_BATCH_TEST_CODE_LIST:
+                            continue
+                    event_info = EventInfo.objects.filter(event_code=k)
+                    if event_info.count() == 0:  # 가격정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
+                        logger.error('KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(k))
+                        continue
+                    if v['open'] != 0 and v['high'] != 0 and v['low'] != 0 and v['close'] != 0:
+                        # logger.info('금일 주가 INSERT : code=' + k, )
+                        entry = NotAdjPriceInfo(**v)
+                        entry.stock_event_id = event_info.first().stock_event_id
+                        entry.save()
+
+                    event_status = InfoUpdateStatus.objects.filter(
+                        stock_event_id=event_info.first().stock_event_id).filter(table_type='N')
+                    if len(event_status) == 0:
+                        status_dict = {'table_type': 'N', 'mod_dt': scan_date, 'reg_dt': scan_date,
+                                       'stock_event_id': event_info.first().stock_event_id}
+                        event_status_insert = InfoUpdateStatus(**status_dict)
+                        event_status_insert.save()
+                    else:
+                        event_status.update(mod_dt=scan_date)
+
+    else:
+        logger.info('[manage_event_daily_etc] manage_event_init OR manage_evetn_init_etc executed. skip daily_etc')
+
+
 def manage_fundamental_daily():
     logger.info('[manage_fundamental_daily] start')
-    cur_datetime = datetime.now()
-    cur_date_str = cur_datetime.strftime('%Y%m%d')
-    cur_qt = calQuarter(cur_datetime)
-    # cur_year = cur_datetime.strftime('%Y')
-    start_get_market = datetime.now()
-    market_event_info = None
-    try:
-        market_event_info = krx.get_market_ticker_and_name(date=cur_date_str, market='ALL')
-    except Exception as e:
-        logger.error('[manage_fundamental_daily] error occurred.')
-    end_get_market = datetime.now()
-    logger.info('get market ticket time = {}'.format(end_get_market-start_get_market))
-    logger.info('market event info count={}'.format(len(market_event_info)))
-    for event_code, event_name in market_event_info.iteritems():
-        if BATCH_TEST_CODE_YN:
-            if event_code not in BATCH_TEST_CODE_LIST:
+    if not first:
+        cur_datetime = datetime.now()
+        cur_date_str = cur_datetime.strftime('%Y%m%d')
+        cur_qt = calQuarter(cur_datetime)
+        # cur_year = cur_datetime.strftime('%Y')
+        start_get_market = datetime.now()
+        market_event_info = None
+        try:
+            market_event_info = krx.get_market_ticker_and_name(date=cur_date_str, market='ALL')
+        except Exception as e:
+            logger.error('[manage_fundamental_daily] error occurred.')
+        end_get_market = datetime.now()
+        logger.info('get market ticket time = {}'.format(end_get_market - start_get_market))
+        logger.info('market event info count={}'.format(len(market_event_info)))
+        for event_code, event_name in market_event_info.iteritems():
+            if BATCH_TEST_CODE_YN:
+                if event_code not in BATCH_TEST_CODE_LIST:
+                    continue
+                else:
+                    print('TEST : {}/{}'.format(event_code, event_name))
+            # fundamental table에서 현재종목의 가장 최근 분기 가져오기.
+            event_info = EventInfo.objects.filter(event_code=event_code)
+            if event_info.count() == 0:
+                logger.info('[manage_fundamental_daily] 종목 정보가 존재하지 않음 event_code = {}, '
+                            'event_name = {}'.format(event_code, event_name))
                 continue
+            recent_quarter = FundamentalInfo.objects.filter(stock_event_id=event_info.first().stock_event_id).order_by(
+                '-quarter')[:1]
+
+            scan_qt = None
+            if recent_quarter.count() == 0:  # 등록된 재무정보가 아예없을경우
+                # 가격정보에서 조회한 주가시작날짜를 첫번쨰 조회분기로 지정
+                start_price_info = PriceInfo.objects.filter(
+                    stock_event_id=event_info.first().stock_event_id).order_by('date')[:1]
+                scan_qt = calQuarter(start_price_info.first().date)
             else:
-                print('TEST : {}/{}'.format(event_code, event_name))
-        # fundamental table에서 현재종목의 가장 최근 분기 가져오기.
-        event_info = EventInfo.objects.filter(event_code=event_code)
-        if event_info.count() == 0:
-            logger.info('[manage_fundamental_daily] 종목 정보가 존재하지 않음 event_code = {}, '
-                        'event_name = {}'.format(event_code, event_name))
-            continue
-        recent_quarter = FundamentalInfo.objects.filter(stock_event_id=event_info.first().stock_event_id).order_by(
-            '-quarter')[:1]
+                scan_qt = calNextQuarter(recent_quarter.first().quarter)
 
-        scan_qt = None
-        if recent_quarter.count() == 0:  # 등록된 재무정보가 아예없을경우
-            # 가격정보에서 조회한 주가시작날짜를 첫번쨰 조회분기로 지정
-            start_price_info = PriceInfo.objects.filter(
-                stock_event_id=event_info.first().stock_event_id).order_by('date')[:1]
-            scan_qt = calQuarter(start_price_info.first().date)
-        else:
-            scan_qt = calNextQuarter(recent_quarter.first().quarter)
+            while cur_qt != scan_qt:
+                logger.info('scan_qt={}'.format(scan_qt))
+                scan_date = datetime.strptime(scan_qt, '%Y%m')
+                quarter_code = calQuarterCode(scan_date)
+                finstate = DartManager.instance().get_dart().finstate_all(event_name, scan_date.year, quarter_code)
+                # logger.info('finstate = {}'.format(finstate))
+                if finstate is not None:
+                    try:
+                        assets = int(
+                            finstate.loc[DartConfig().assets_condition(finstate)].iloc[0][DartConfig().column_amount])
+                        liabilities = int(
+                            finstate.loc[DartConfig().liabilities_condition(finstate)].iloc[0][
+                                DartConfig().column_amount])
+                        equity = int(
+                            finstate.loc[DartConfig().equity_condition(finstate)].iloc[0][DartConfig().column_amount])
+                        revenue = int(
+                            finstate.loc[DartConfig().revenue_condition(finstate)].iloc[0][DartConfig().column_amount])
+                        profit_loss = int(
+                            finstate.loc[DartConfig().profit_loss_condition(finstate)].iloc[0][
+                                DartConfig().column_amount])
+                        operating_income_loss = int(
+                            finstate.loc[DartConfig().operating_income_loss_condition(finstate)].iloc[0][
+                                DartConfig().column_amount])
+                        profit_loss_control = int(
+                            finstate.loc[DartConfig().profit_loss_control_condition(finstate)].iloc[0][
+                                DartConfig().column_amount])
+                        profit_loss_non_control = int(
+                            finstate.loc[DartConfig().profit_loss_non_control_condition(finstate)].iloc[0][
+                                DartConfig().column_amount])
+                        profit_loss_before_tax = int(
+                            finstate.loc[DartConfig().profit_loss_before_tax_condition(finstate)].iloc[0][
+                                DartConfig().column_amount])
+                        eps = int(
+                            finstate.loc[DartConfig().eps_condition(finstate)].iloc[0][DartConfig().column_amount])
+                        investing_cash_flow = int(
+                            finstate.loc[DartConfig().investing_cash_flow_condition(finstate)].iloc[0][
+                                DartConfig().column_amount])
+                        operating_cash_flow = int(
+                            finstate.loc[DartConfig().operating_cash_flow_condition(finstate)].iloc[0][
+                                DartConfig().column_amount])
+                        financing_cash_flow = int(
+                            finstate.loc[DartConfig().financing_cash_flow_condition(finstate)].iloc[0][
+                                DartConfig().column_amount])
+                        recent_quarter = FundamentalInfo.objects.filter(
+                            stock_event_id=event_info.first().stock_event_id) \
+                            .filter(quarter__startswith=str(scan_date.year))
+                        logger.info('get recent qt count={}'.format(recent_quarter.count()))
+                        if quarter_code == '11011':  # 사업보고서의 경우 1,2,3분기를 합산한 금액을 감액해야 4분기 계산가능
+                            for item in recent_quarter:
+                                if not item.quarter.endswith('12'):
+                                    revenue -= item.revenue
+                                    operating_income_loss -= item.operating_income_loss
+                                    profit_loss -= item.profit_loss
+                                    profit_loss_control -= item.profit_loss_control
+                                    profit_loss_non_control -= item.profit_loss_non_control
+                                    profit_loss_before_tax -= item.profit_loss_before_tax
+                                    eps -= item.eps
+                                    investing_cash_flow -= item.investing_cash_flow
+                                    operating_cash_flow -= item.operating_cash_flow
+                                    financing_cash_flow -= item.financing_cash_flow
 
-        while cur_qt != scan_qt:
-            logger.info('scan_qt={}'.format(scan_qt))
-            scan_date = datetime.strptime(scan_qt, '%Y%m')
-            quarter_code = calQuarterCode(scan_date)
-            finstate = DartManager.instance().get_dart().finstate_all(event_name, scan_date.year, quarter_code)
-            # logger.info('finstate = {}'.format(finstate))
-            if finstate is not None:
-                try:
-                    assets = int(
-                        finstate.loc[DartConfig().assets_condition(finstate)].iloc[0][DartConfig().column_amount])
-                    liabilities = int(
-                        finstate.loc[DartConfig().liabilities_condition(finstate)].iloc[0][DartConfig().column_amount])
-                    equity = int(
-                        finstate.loc[DartConfig().equity_condition(finstate)].iloc[0][DartConfig().column_amount])
-                    revenue = int(
-                        finstate.loc[DartConfig().revenue_condition(finstate)].iloc[0][DartConfig().column_amount])
-                    profit_loss = int(
-                        finstate.loc[DartConfig().profit_loss_condition(finstate)].iloc[0][DartConfig().column_amount])
-                    operating_income_loss = int(
-                        finstate.loc[DartConfig().operating_income_loss_condition(finstate)].iloc[0][
-                            DartConfig().column_amount])
-                    profit_loss_control = int(
-                        finstate.loc[DartConfig().profit_loss_control_condition(finstate)].iloc[0][
-                            DartConfig().column_amount])
-                    profit_loss_non_control = int(
-                        finstate.loc[DartConfig().profit_loss_non_control_condition(finstate)].iloc[0][
-                            DartConfig().column_amount])
-                    profit_loss_before_tax = int(
-                        finstate.loc[DartConfig().profit_loss_before_tax_condition(finstate)].iloc[0][
-                            DartConfig().column_amount])
-                    eps = int(finstate.loc[DartConfig().eps_condition(finstate)].iloc[0][DartConfig().column_amount])
-                    investing_cash_flow = int(
-                        finstate.loc[DartConfig().investing_cash_flow_condition(finstate)].iloc[0][
-                            DartConfig().column_amount])
-                    operating_cash_flow = int(
-                        finstate.loc[DartConfig().operating_cash_flow_condition(finstate)].iloc[0][
-                            DartConfig().column_amount])
-                    financing_cash_flow = int(
-                        finstate.loc[DartConfig().financing_cash_flow_condition(finstate)].iloc[0][
-                            DartConfig().column_amount])
-                    recent_quarter = FundamentalInfo.objects.filter(stock_event_id=event_info.first().stock_event_id) \
-                        .filter(quarter__startswith=str(scan_date.year))
-                    logger.info('get recent qt count={}'.format(recent_quarter.count()))
-                    if quarter_code == '11011':  # 사업보고서의 경우 1,2,3분기를 합산한 금액을 감액해야 4분기 계산가능
-                        for item in recent_quarter:
-                            if not item.quarter.endswith('12'):
-                                revenue -= item.revenue
-                                operating_income_loss -= item.operating_income_loss
-                                profit_loss -= item.profit_loss
-                                profit_loss_control -= item.profit_loss_control
-                                profit_loss_non_control -= item.profit_loss_non_control
-                                profit_loss_before_tax -= item.profit_loss_before_tax
-                                eps -= item.eps
-                                investing_cash_flow -= item.investing_cash_flow
-                                operating_cash_flow -= item.operating_cash_flow
-                                financing_cash_flow -= item.financing_cash_flow
+                        if quarter_code == '11012':  # 2분기 현금흐름 계산
+                            for item in recent_quarter:
+                                if item.quarter.endswith('03'):
+                                    investing_cash_flow -= item.investing_cash_flow
+                                    operating_cash_flow -= item.operating_cash_flow
+                                    financing_cash_flow -= item.financing_cash_flow
 
-                    if quarter_code == '11012':  # 2분기 현금흐름 계산
-                        for item in recent_quarter:
-                            if item.quarter.endswith('03'):
-                                investing_cash_flow -= item.investing_cash_flow
-                                operating_cash_flow -= item.operating_cash_flow
-                                financing_cash_flow -= item.financing_cash_flow
+                        if quarter_code == '11014':  # 3분기 현금흐름 계산
+                            for item in recent_quarter:
+                                if item.quarter.endswith('03') or item.quarter.endswith('06'):
+                                    investing_cash_flow -= item.investing_cash_flow
+                                    operating_cash_flow -= item.operating_cash_flow
+                                    financing_cash_flow -= item.financing_cash_flow
 
-                    if quarter_code == '11014':  # 3분기 현금흐름 계산
-                        for item in recent_quarter:
-                            if item.quarter.endswith('03') or item.quarter.endswith('06'):
-                                investing_cash_flow -= item.investing_cash_flow
-                                operating_cash_flow -= item.operating_cash_flow
-                                financing_cash_flow -= item.financing_cash_flow
-
-                    entry = FundamentalInfo(**{'stock_event_id': event_info.first().stock_event_id, 'quarter': scan_qt,
-                                               'assets': assets, 'liabilities': liabilities, 'equity': equity,
-                                               'revenue': revenue, 'operating_income_loss': operating_income_loss,
-                                               'profit_loss': profit_loss, 'profit_loss_control': profit_loss_control,
-                                               'profit_loss_non_control': profit_loss_non_control,
-                                               'profit_loss_before_tax': profit_loss_before_tax, 'eps': eps,
-                                               'investing_cash_flow': investing_cash_flow,
-                                               'operating_cash_flow': operating_cash_flow,
-                                               'financing_cash_flow': financing_cash_flow})
-                    entry.save()
-                except Exception as e:
-                    logger.exception(
-                        '[manage_fundamental_daily] error occured. event_name = {} / event_code = {} / scan_qt={}'.format(
-                            event_name, event_code, scan_qt))
-            # 다음 분기 계산
-            scan_qt = calNextQuarter(scan_qt)
-            time.sleep(0.2)
+                        entry = FundamentalInfo(
+                            **{'stock_event_id': event_info.first().stock_event_id, 'quarter': scan_qt,
+                               'assets': assets, 'liabilities': liabilities, 'equity': equity,
+                               'revenue': revenue, 'operating_income_loss': operating_income_loss,
+                               'profit_loss': profit_loss, 'profit_loss_control': profit_loss_control,
+                               'profit_loss_non_control': profit_loss_non_control,
+                               'profit_loss_before_tax': profit_loss_before_tax, 'eps': eps,
+                               'investing_cash_flow': investing_cash_flow,
+                               'operating_cash_flow': operating_cash_flow,
+                               'financing_cash_flow': financing_cash_flow})
+                        entry.save()
+                    except Exception as e:
+                        logger.exception(
+                            '[manage_fundamental_daily] error occured. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                event_name, event_code, scan_qt))
+                # 다음 분기 계산
+                scan_qt = calNextQuarter(scan_qt)
+                time.sleep(0.2)
 
 
 def calQuarter(quarter_date):

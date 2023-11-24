@@ -2,11 +2,13 @@ from apscheduler.schedulers.background import BackgroundScheduler, BlockingSched
 from apscheduler.triggers.cron import CronTrigger
 from django.conf import settings
 from django_apscheduler.jobstores import DjangoJobStore
-from .stock_data_manage import manage_event_init, manage_event_daily, validate_connection, manage_fundamental_daily
+from .stock_data_manage import manage_event_init, manage_event_daily, validate_connection, manage_fundamental_daily, \
+    manage_event_init_etc, manage_event_daily_etc
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 import traceback
 import datetime
-from ..config.stockConfig import BATCH_HOUR, BATCH_MIN, BATCH_SEC, BATCH_TEST
+from ..config.stockConfig import BATCH_HOUR, BATCH_MIN, BATCH_SEC, BATCH_TEST, ETC_BATCH_HOUR, ETC_BATCH_MIN, \
+    ETC_BATCH_SEC
 import logging
 
 logger = logging.getLogger('batch')
@@ -46,14 +48,33 @@ class operator:
                     datetime.date(today_org.year, today_org.month, today_org.day),
                     datetime.time(BATCH_HOUR, BATCH_MIN, BATCH_SEC))
 
-            self.scheduler.add_job(manage_event_daily, 'cron', hour=daily_batch_time.hour,
-                                   minute=daily_batch_time.minute,
-                                   second=daily_batch_time.second,
-                                   id='manage_event_daily',
+            # self.scheduler.add_job(manage_event_daily, 'cron', hour=daily_batch_time.hour,
+            #                        minute=daily_batch_time.minute,
+            #                        second=daily_batch_time.second,
+            #                        id='manage_event_daily',
+            #                        replace_existing=True)
+
+            # The 'date' trigger and datetime.now() as run_date are implicit
+            self.scheduler.add_job(manage_event_init_etc, 'date', run_date=today_org + datetime.timedelta(seconds=30),
+                                   id='manage_event_init_etc', replace_existing=True)
+
+            etc_daily_batch_time = None
+            if BATCH_TEST:
+                etc_daily_batch_time = today_org + datetime.timedelta(seconds=40)
+            else:
+                etc_daily_batch_time = datetime.datetime.combine(
+                    datetime.date(today_org.year, today_org.month, today_org.day),
+                    datetime.time(ETC_BATCH_HOUR, ETC_BATCH_MIN, ETC_BATCH_SEC))
+
+            self.scheduler.add_job(manage_event_daily_etc, 'cron', hour=etc_daily_batch_time.hour,
+                                   minute=etc_daily_batch_time.minute,
+                                   second=etc_daily_batch_time.second,
+                                   id='manage_event_daily_etc',
                                    replace_existing=True)
 
-            self.scheduler.add_job(manage_fundamental_daily, 'date', run_date=today_org + datetime.timedelta(seconds=10),
-                                   id='manage_fundamental_daily', replace_existing=True)
+            # self.scheduler.add_job(manage_fundamental_daily, 'date',
+            #                        run_date=today_org + datetime.timedelta(seconds=10),
+            #                        id='manage_fundamental_daily', replace_existing=True)
 
             self.scheduler.add_job(validate_connection, 'interval', hours=2, id='validate_connection',
                                    replace_existing=True)
