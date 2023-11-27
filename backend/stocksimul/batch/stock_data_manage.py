@@ -9,7 +9,7 @@ import numpy as np
 from numpy.lib import math
 import logging
 from ..config.stockConfig import BATCH_TEST_CODE_YN, BATCH_TEST_CODE_LIST, BATCH_FIRST_INSERT_ALL, \
-    ETC_BATCH_TEST_CODE_YN, ETC_BATCH_TEST_CODE_LIST, ETC_FIRST_BATCH_TODATE
+    ETC_FIRST_BATCH_TODATE
 from ..custom.opendartreader.dart_manager import DartManager
 from ..custom.opendartreader.dart_config import DartConfig
 from ..custom import pykrx as stock_custom
@@ -354,8 +354,8 @@ def manage_event_init_etc():
             etc_first = True
             cur_event_info = EventInfo.objects.all()
             for cur_event in cur_event_info:
-                if ETC_BATCH_TEST_CODE_YN:
-                    if cur_event.event_code not in ETC_BATCH_TEST_CODE_LIST:
+                if BATCH_TEST_CODE_YN:
+                    if cur_event.event_code not in BATCH_TEST_CODE_LIST:
                         continue
                 # 기존 등록된 종목인지 확인.
                 event_status = InfoUpdateStatus.objects.filter(stock_event_id=cur_event.stock_event_id) \
@@ -488,6 +488,9 @@ def manage_event_daily_etc():
 
 def manage_fundamental_daily():
     logger.info('[manage_fundamental_daily] start')
+    while first:
+        time.sleep(10)
+        logger.info('[manage_fundamental_daily] waiting for manage_event_init to compelete')
     if not first:
         cur_datetime = datetime.datetime.now()
         cur_date_str = cur_datetime.strftime('%Y%m%d')
@@ -526,7 +529,7 @@ def manage_fundamental_daily():
             else:
                 scan_qt = calcNextQuarter(recent_quarter.first().quarter)
 
-            while cur_qt != scan_qt:
+            while cur_qt > scan_qt:
                 logger.info('scan_qt={}'.format(scan_qt))
                 scan_date = datetime.datetime.strptime(scan_qt, '%Y%m')
                 quarter_code = calcQuarterCode(scan_date)
