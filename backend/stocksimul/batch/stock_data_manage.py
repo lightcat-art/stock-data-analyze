@@ -9,7 +9,7 @@ import numpy as np
 from numpy.lib import math
 import logging
 from ..config.stockConfig import BATCH_TEST_CODE_YN, BATCH_TEST_CODE_LIST, SKIP_MANAGE_EVENT_INIT, \
-    ETC_FIRST_BATCH_TODATE
+    ETC_FIRST_BATCH_TODATE, FUND_RETRY, FUND_API_REQUEST_TERM
 from ..custom.opendartreader.dart_manager import DartManager
 from ..custom.opendartreader.dart_config import DartConfig
 from ..custom import pykrx as stock_custom
@@ -141,7 +141,7 @@ def manage_event_init():
                 end_insert_market_data = datetime.datetime.now().timestamp()
                 insert_market_data_time_taken += (end_insert_market_data - end_get_market_data)
 
-                status_dict = {'table_type': 'P', 'mod_dt': todate_org, 'reg_dt': todate_org,
+                status_dict = {'table_type': 'P', 'mod_dt': todate_org, 'reg_dt': todate_org, 'update_type': 'U',
                                'stock_event_id': event_info.first().stock_event_id}
                 event_status_insert = InfoUpdateStatus(**status_dict)
                 event_status_insert.save()
@@ -209,7 +209,7 @@ def manage_event_daily():
                         code_new = True
                         new_event_result.update({market_event_code: market_event_name})
 
-                if SKIP_MANAGE_EVENT_INIT: # 현재 DB에 등록된 종목을 기준으로 업데이트 테스트하기 위해 삭제/신규종목 초기화
+                if SKIP_MANAGE_EVENT_INIT:  # 현재 DB에 등록된 종목을 기준으로 업데이트 테스트하기 위해 삭제/신규종목 초기화
                     new_event_result = {}
                     del_event_result = []
 
@@ -218,7 +218,7 @@ def manage_event_daily():
                         del_event_info = EventInfo.objects.filter(event_code=delete_event_code)
                         if len(del_event_info) != 0:
                             logger.info('{}종목 삭제 : {} / {}'.format(logger_method, del_event_info.first().event_name,
-                                                                 del_event_info.first().event_code))
+                                                                   del_event_info.first().event_code))
 
                             # stockevent 테이블 업데이트 - 삭제 종목
                             del_event_id = del_event_info.first().stock_event_id
@@ -259,7 +259,7 @@ def manage_event_daily():
 
                         event_info = EventInfo.objects.filter(event_code=k)
                         if event_info.count() == 0:  # 가격정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
-                            logger.error('{}KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(logger_method, k))
+                            # logger.error('{}KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(logger_method, k))
                             continue
                         logger.debug('{}기존/신규종목 UPDATE : {} / {}'.format(
                             logger_method, k, event_info.first().event_name))
@@ -330,7 +330,7 @@ def manage_event_daily():
                             stock_event_id=event_info.first().stock_event_id).filter(table_type='P')
                         if len(event_status) == 0:
                             status_dict = {'table_type': 'P', 'mod_dt': today_org, 'reg_dt': today_org,
-                                           'stock_event_id': event_info.first().stock_event_id}
+                                           'update_type': 'U', 'stock_event_id': event_info.first().stock_event_id}
                             event_status_insert = InfoUpdateStatus(**status_dict)
                             event_status_insert.save()
                         else:
@@ -407,7 +407,7 @@ def manage_event_init_etc():
                             entry.save()
 
                 status_dict = {'table_type': 'N', 'mod_dt': todate_org, 'reg_dt': todate_org,
-                               'stock_event_id': cur_event.stock_event_id}
+                               'update_type': 'U', 'stock_event_id': cur_event.stock_event_id}
                 event_status_insert = InfoUpdateStatus(**status_dict)
                 event_status_insert.save()
         else:
@@ -424,6 +424,7 @@ def manage_event_daily_etc():
     global etc_first
     logger_method = '[manage_event_daily_etc] '
     if not first and not etc_first:
+        logger.info('{}start'.format(logger_method))
         today_org = datetime.datetime.now()
         today = today_org.strftime('%Y%m%d')
 
@@ -441,7 +442,8 @@ def manage_event_daily_etc():
                 not_adj_delete_event.delete()
                 continue
 
-        # 마지막으로 일괄처리된 날짜 조회하여 해당날짜 이후부터 INSERT
+        # 가장 오래된 일괄처리 처리 날짜 조회하여 해당날짜 이후부터 INSERT (누락건에 대해 체크)
+        # mod_dt를 오름차순으로 정렬
         event_status = InfoUpdateStatus.objects.filter(table_type='N').distinct().values_list('mod_dt').order_by(
             'mod_dt')[:1]
 
@@ -475,7 +477,7 @@ def manage_event_daily_etc():
                             continue
                     event_info = EventInfo.objects.filter(event_code=k)
                     if event_info.count() == 0:  # 가격정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
-                        logger.error('{}KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(logger_method, k))
+                        # logger.error('{}KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(logger_method, k))
                         continue
                     if v['open'] != 0 and v['high'] != 0 and v['low'] != 0 and v['close'] != 0:
                         # logger.info('금일 주가 INSERT : code=' + k, )
@@ -487,7 +489,7 @@ def manage_event_daily_etc():
                         stock_event_id=event_info.first().stock_event_id).filter(table_type='N')
                     if len(event_status) == 0:
                         status_dict = {'table_type': 'N', 'mod_dt': scan_date, 'reg_dt': scan_date,
-                                       'stock_event_id': event_info.first().stock_event_id}
+                                       'update_type': 'U', 'stock_event_id': event_info.first().stock_event_id}
                         event_status_insert = InfoUpdateStatus(**status_dict)
                         event_status_insert.save()
                     else:
@@ -508,15 +510,6 @@ def manage_fundamental_daily():
         cur_date_str = cur_datetime.strftime('%Y%m%d')
         cur_qt = calcQuarter(cur_datetime)
         # cur_year = cur_datetime.strftime('%Y')
-        start_get_market = datetime.datetime.now()
-        market_event_info = None
-        try:
-            market_event_info = krx.get_market_ticker_and_name(date=cur_date_str, market='ALL')
-        except Exception as e:
-            logger.error('{}error occurred.'.format(logger_method))
-        end_get_market = datetime.datetime.now()
-        logger.info('{}get market ticket time = {}'.format(logger_method, end_get_market - start_get_market))
-        logger.info('{}market event info count={}'.format(logger_method, len(market_event_info)))
 
         all_event_info = EventInfo.objects.all()
         cur_event_id_list = []
@@ -532,12 +525,24 @@ def manage_fundamental_daily():
                 fund_delete_event.delete()
                 continue
 
+        fund_retry_recent_id = 0
+        if FUND_RETRY:
+            fund_retry_recent_id = FundamentalInfo.objects.order_by('-stock_event_id')[:1].first().stock_event_id
+            logger.info('{}FUND_RETRY. get recent stock_event_id in fundamental table. stock_event_id = {}'.format(
+                logger_method, fund_retry_recent_id))
+
+        STOP_BATCH_TF = False  # 예외상황이 발생하였을때, 작업중지플래그
         for event_info in all_event_info:
+            if STOP_BATCH_TF:
+                break
+            if fund_retry_recent_id > event_info.stock_event_id:
+                logger.info('skip stock_event_id = {}'.format(event_info.stock_event_id))
+                continue
             if BATCH_TEST_CODE_YN:
                 if event_info.event_code not in BATCH_TEST_CODE_LIST:
                     continue
                 else:
-                    print('TEST : {}/{}'.format(event_info.event_code, event_info.event_name))
+                    logger.info('TEST : {}/{}'.format(event_info.event_code, event_info.event_name))
             # fundamental table에서 현재종목의 가장 최근 분기 가져오기.
             recent_quarter = FundamentalInfo.objects.filter(stock_event_id=event_info.stock_event_id).order_by(
                 '-quarter')[:1]
@@ -547,96 +552,303 @@ def manage_fundamental_daily():
                 # 가격정보에서 조회한 주가시작날짜를 첫번쨰 조회분기로 지정
                 start_price_info = PriceInfo.objects.filter(
                     stock_event_id=event_info.stock_event_id).order_by('date')[:1]
-                scan_qt = calcQuarter(start_price_info.first().date)
+                # 신규상장종목의 경우 종목정보에는 들어가는데 가격정보에는 없을수 있다.
+                # 이때는 당연히 아직 재무정보공시가 아직 안된 시점이므로 이점 참고하여 예외처리.
+                if start_price_info is None or start_price_info.first() is None:
+                    continue
+                else:
+                    scan_qt = calcQuarter(start_price_info.first().date)
             else:
                 scan_qt = calcNextQuarter(recent_quarter.first().quarter)
 
+            # 조회한 시작분기가 8년전 1분기보다 더 오래되었을때 최소조회분기를 8년전 1분기로 지정
+            min_qt = calcFirstQuarterOfMinYear(cur_datetime)
+            if min_qt > scan_qt:
+                scan_qt = min_qt
+
             while cur_qt > scan_qt:
-                logger.info('{}scan_qt={}'.format(logger_method, scan_qt))
+                logger.info('{}event = {}/{}/{}, scan_qt={}'.format(logger_method, event_info.stock_event_id,
+                                                                    event_info.event_name, event_info.event_code,
+                                                                    scan_qt))
                 scan_date = datetime.datetime.strptime(scan_qt, '%Y%m')
                 quarter_code = calcQuarterCode(scan_date)
 
                 # 해당년도의 첫번째분기가 DB에 등록되어있지 않다면 다음년도로 넘어가기.
-                is_valid = validateQuarter(qt=scan_qt, stock_event_id=event_info.stock_event_id)
-                if not is_valid:
-                    calcFirstQuarterOfNextYear(scan_qt)
-                    continue
-
-                finstate = DartManager.instance().get_dart().finstate_all(event_info.event_name, scan_date.year, quarter_code)
+                if not scan_qt.endswith('03'):
+                    is_valid = validateQuarter(qt=scan_qt, stock_event_id=event_info.stock_event_id)
+                    if not is_valid:
+                        scan_qt = calcFirstQuarterOfNextYear(scan_qt)
+                        continue
+                finstate = None
+                try:
+                    finstate = DartManager.instance().get_dart().finstate_all(event_info.event_name, scan_date.year,
+                                                                              quarter_code)
+                except Exception as e:
+                    logger.exception('get finstate request over-limited')
+                    STOP_BATCH_TF = True
+                    break
                 # logger.info('finstate = {}'.format(finstate))
                 if finstate is not None:
                     try:
-                        assets = int(
-                            finstate.loc[DartConfig().assets_condition(finstate)].iloc[0][DartConfig().column_amount])
-                        liabilities = int(
-                            finstate.loc[DartConfig().liabilities_condition(finstate)].iloc[0][
-                                DartConfig().column_amount])
-                        equity = int(
-                            finstate.loc[DartConfig().equity_condition(finstate)].iloc[0][DartConfig().column_amount])
-                        revenue = int(
-                            finstate.loc[DartConfig().revenue_condition(finstate)].iloc[0][DartConfig().column_amount])
-                        profit_loss = int(
-                            finstate.loc[DartConfig().profit_loss_condition(finstate)].iloc[0][
-                                DartConfig().column_amount])
-                        operating_income_loss = int(
-                            finstate.loc[DartConfig().operating_income_loss_condition(finstate)].iloc[0][
-                                DartConfig().column_amount])
-                        profit_loss_control = int(
-                            finstate.loc[DartConfig().profit_loss_control_condition(finstate)].iloc[0][
-                                DartConfig().column_amount])
-                        profit_loss_non_control = int(
-                            finstate.loc[DartConfig().profit_loss_non_control_condition(finstate)].iloc[0][
-                                DartConfig().column_amount])
-                        profit_loss_before_tax = int(
-                            finstate.loc[DartConfig().profit_loss_before_tax_condition(finstate)].iloc[0][
-                                DartConfig().column_amount])
+                        assets = 0
+                        current_assets = 0
+                        non_current_assets = 0
+                        liabilities = 0
+                        current_liabilities = 0
+                        non_current_liabilities = 0
+                        equity = 0
+                        equity_control = 0
+                        equity_non_control = 0
+                        revenue = 0
+                        cost_of_sales = 0
+                        gross_profit = 0
+                        operating_income_loss = 0
+                        profit_loss = 0
+                        profit_loss_control = 0
+                        profit_loss_non_control = 0
+                        profit_loss_before_tax = 0
+                        investing_cash_flow = 0
+                        operating_cash_flow = 0
+                        financing_cash_flow = 0
+                        try:
+                            assets_org = finstate.loc[DartConfig().assets_condition(finstate)].iloc[0][
+                                DartConfig().column_amount]
+                            assets = 0 if assets_org == '' else int(assets_org)
+                        except Exception as e:
+                            logger.error('{}assets error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            current_assets_org = finstate.loc[DartConfig().current_assets_condition(finstate)].iloc[0][
+                                DartConfig().column_amount]
+                            current_assets = 0 if current_assets_org == '' else int(current_assets_org)
+                        except Exception as e:
+                            logger.error(
+                                '{}current_assets error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            non_current_assets_org = \
+                                finstate.loc[DartConfig().non_current_assets_condition(finstate)].iloc[0][
+                                    DartConfig().column_amount]
+                            non_current_assets = 0 if non_current_assets_org == '' else int(non_current_assets_org)
+                        except Exception as e:
+                            logger.error(
+                                '{}non_current_assets error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            liabilities_org = finstate.loc[DartConfig().liabilities_condition(finstate)].iloc[0][
+                                DartConfig().column_amount]
+                            liabilities = 0 if liabilities_org == '' else int(liabilities_org)
+                        except Exception as e:
+                            logger.error('{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            current_liabilities_org = \
+                                finstate.loc[DartConfig().current_liabilities_condition(finstate)].iloc[0][
+                                    DartConfig().column_amount]
+                            current_liabilities = 0 if current_liabilities_org == '' else int(
+                                current_liabilities_org)
+                        except Exception as e:
+                            logger.error(
+                                '{}current_liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
+
+                        try:
+                            non_current_liabilities_org = \
+                                finstate.loc[DartConfig().non_current_liabilities_condition(finstate)].iloc[0][
+                                    DartConfig().column_amount]
+                            non_current_liabilities = 0 if non_current_liabilities_org == '' else int(
+                                non_current_liabilities_org)
+                        except Exception as e:
+                            logger.error(
+                                '{}non_current_liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
+
+                        try:
+                            equity_org = finstate.loc[DartConfig().equity_condition(finstate)].iloc[0][
+                                DartConfig().column_amount]
+                            equity = 0 if equity_org == '' else int(equity_org)
+                        except Exception as e:
+                            logger.error('{}equity error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            equity_control_org = finstate.loc[DartConfig().equity_control_condition(finstate)].iloc[0][
+                                DartConfig().column_amount]
+                            equity_control = 0 if equity_control_org == '' else int(equity_control_org)
+                        except Exception as e:
+                            logger.error(
+                                '{}equity_control error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            equity_non_control_org = \
+                                finstate.loc[DartConfig().equity_non_control_condition(finstate)].iloc[0][
+                                    DartConfig().column_amount]
+                            equity_non_control = 0 if equity_non_control_org == '' else int(equity_non_control_org)
+                        except Exception as e:
+                            logger.error(
+                                '{}equity_non_control error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            revenue_org = finstate.loc[DartConfig().revenue_condition(finstate)].iloc[0][
+                                DartConfig().column_amount]
+                            revenue = 0 if revenue_org == '' else int(revenue_org)
+                        except Exception as e:
+                            logger.error('{}revenue error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            cost_of_sales_org = finstate.loc[DartConfig().cost_of_sales_condition(finstate)].iloc[0][
+                                DartConfig().column_amount]
+                            cost_of_sales = 0 if cost_of_sales_org == '' else int(cost_of_sales_org)
+                        except Exception as e:
+                            logger.error('{}cost_of_sales error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+
+                        try:
+                            gross_profit_org = finstate.loc[DartConfig().gross_profit_condition(finstate)].iloc[0][
+                                DartConfig().column_amount]
+                            gross_profit = 0 if gross_profit_org == '' else int(gross_profit_org)
+                        except Exception as e:
+                            logger.error('{}gross_profit error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            operating_income_loss_org = \
+                                finstate.loc[DartConfig().operating_income_loss_condition(finstate)].iloc[0][
+                                    DartConfig().column_amount]
+                            operating_income_loss = 0 if operating_income_loss_org == '' else int(
+                                operating_income_loss_org)
+                        except Exception as e:
+                            logger.error(
+                                '{}operating_income_loss error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            profit_loss_org = finstate.loc[DartConfig().profit_loss_condition(finstate)].iloc[0][
+                                DartConfig().column_amount]
+                            profit_loss = 0 if profit_loss_org == '' else int(profit_loss_org)
+                        except Exception as e:
+                            logger.error('{}profit_loss error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            profit_loss_control_org = \
+                                finstate.loc[DartConfig().profit_loss_control_condition(finstate)].iloc[0][
+                                    DartConfig().column_amount]
+                            profit_loss_control = 0 if profit_loss_control_org == '' else int(
+                                profit_loss_control_org)
+                        except Exception as e:
+                            logger.error(
+                                '{}profit_loss_control error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            profit_loss_non_control_org = \
+                                finstate.loc[DartConfig().profit_loss_non_control_condition(finstate)].iloc[0][
+                                    DartConfig().column_amount]
+                            profit_loss_non_control = 0 if profit_loss_non_control_org == '' else int(
+                                profit_loss_non_control_org)
+                        except Exception as e:
+                            logger.error(
+                                '{}profit_loss_non_control error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            profit_loss_before_tax_org = \
+                                finstate.loc[DartConfig().profit_loss_before_tax_condition(finstate)].iloc[0][
+                                    DartConfig().column_amount]
+                            profit_loss_before_tax = 0 if profit_loss_before_tax_org == '' else int(
+                                profit_loss_before_tax_org)
+                        except Exception as e:
+                            logger.error(
+                                '{}profit_loss_before_tax error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
+
                         # eps = int(
                         #     finstate.loc[DartConfig().eps_condition(finstate)].iloc[0][DartConfig().column_amount])
-                        investing_cash_flow = int(
-                            finstate.loc[DartConfig().investing_cash_flow_condition(finstate)].iloc[0][
-                                DartConfig().column_amount])
-                        operating_cash_flow = int(
-                            finstate.loc[DartConfig().operating_cash_flow_condition(finstate)].iloc[0][
-                                DartConfig().column_amount])
-                        financing_cash_flow = int(
-                            finstate.loc[DartConfig().financing_cash_flow_condition(finstate)].iloc[0][
-                                DartConfig().column_amount])
+                        try:
+                            investing_cash_flow_org = \
+                                finstate.loc[DartConfig().investing_cash_flow_condition(finstate)].iloc[0][
+                                    DartConfig().column_amount]
+                            investing_cash_flow = 0 if investing_cash_flow_org == '' else int(
+                                investing_cash_flow_org)
+                        except Exception as e:
+                            logger.error('{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            operating_cash_flow_org = \
+                                finstate.loc[DartConfig().operating_cash_flow_condition(finstate)].iloc[0][
+                                    DartConfig().column_amount]
+                            operating_cash_flow = 0 if operating_cash_flow_org == '' else int(
+                                operating_cash_flow_org)
+                        except Exception as e:
+                            logger.error('{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                        try:
+                            financing_cash_flow_org = \
+                                finstate.loc[DartConfig().financing_cash_flow_condition(finstate)].iloc[0][
+                                    DartConfig().column_amount]
+                            financing_cash_flow = 0 if financing_cash_flow_org == '' else int(
+                                financing_cash_flow_org)
+                        except Exception as e:
+                            logger.error('{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+
                         recent_quarter = FundamentalInfo.objects.filter(
                             stock_event_id=event_info.stock_event_id) \
                             .filter(quarter__startswith=str(scan_date.year))
-                        logger.info('{}get recent qt count={}'.format(logger_method, recent_quarter.count()))
+                        # logger.info('{}get recent qt count={}'.format(logger_method, recent_quarter.count()))
                         if quarter_code == '11011':  # 사업보고서의 경우 1,2,3분기를 합산한 금액을 감액해야 4분기 계산가능
                             for item in recent_quarter:
                                 if not item.quarter.endswith('12'):
+                                    # if revenue is not None:
                                     revenue -= item.revenue
+                                    # if cost_of_sales is not None:
+                                    cost_of_sales -= item.cost_of_sales
+                                    # if gross_profit is not None:
+                                    gross_profit -= item.gross_profit
+                                    # if operating_income_loss is not None:
                                     operating_income_loss -= item.operating_income_loss
+                                    # if profit_loss is not None:
                                     profit_loss -= item.profit_loss
+                                    # if profit_loss_control is not None:
                                     profit_loss_control -= item.profit_loss_control
+                                    # if profit_loss_non_control is not None:
                                     profit_loss_non_control -= item.profit_loss_non_control
+                                    # if profit_loss_before_tax is not None:
                                     profit_loss_before_tax -= item.profit_loss_before_tax
                                     # eps -= item.eps
+                                    # if investing_cash_flow is not None:
                                     investing_cash_flow -= item.investing_cash_flow
+                                    # if operating_cash_flow is not None:
                                     operating_cash_flow -= item.operating_cash_flow
+                                    # if financing_cash_flow is not None:
                                     financing_cash_flow -= item.financing_cash_flow
 
                         if quarter_code == '11012':  # 2분기 현금흐름 계산
                             for item in recent_quarter:
                                 if item.quarter.endswith('03'):
+                                    # if investing_cash_flow is not None:
                                     investing_cash_flow -= item.investing_cash_flow
+                                    # if operating_cash_flow is not None:
                                     operating_cash_flow -= item.operating_cash_flow
+                                    # if financing_cash_flow is not None:
                                     financing_cash_flow -= item.financing_cash_flow
 
                         if quarter_code == '11014':  # 3분기 현금흐름 계산
                             for item in recent_quarter:
                                 if item.quarter.endswith('03') or item.quarter.endswith('06'):
+                                    # if investing_cash_flow is not None:
                                     investing_cash_flow -= item.investing_cash_flow
+                                    # if operating_cash_flow is not None:
                                     operating_cash_flow -= item.operating_cash_flow
+                                    # if financing_cash_flow is not None:
                                     financing_cash_flow -= item.financing_cash_flow
 
                         entry = FundamentalInfo(
                             **{'stock_event_id': event_info.stock_event_id, 'quarter': scan_qt,
-                               'assets': assets, 'liabilities': liabilities, 'equity': equity,
-                               'revenue': revenue, 'operating_income_loss': operating_income_loss,
+                               'assets': assets, 'current_assets': current_assets,
+                               'non_current_assets': non_current_assets,
+                               'liabilities': liabilities, 'current_liabilities': current_liabilities,
+                               'non_current_liabilities': non_current_liabilities,
+                               'equity': equity, 'equity_control': equity_control,
+                               'equity_non_control': equity_non_control,
+                               'revenue': revenue, 'cost_of_sales': cost_of_sales,
+                               'gross_profit': gross_profit,
+                               'operating_income_loss': operating_income_loss,
                                'profit_loss': profit_loss, 'profit_loss_control': profit_loss_control,
                                'profit_loss_non_control': profit_loss_non_control,
                                'profit_loss_before_tax': profit_loss_before_tax,
@@ -651,7 +863,9 @@ def manage_fundamental_daily():
                                 logger_method, event_info.event_name, event_info.event_code, scan_qt))
                 # 다음 분기 계산
                 scan_qt = calcNextQuarter(scan_qt)
-                time.sleep(0.2)
+                time.sleep(FUND_API_REQUEST_TERM)
+
+        logger.info('{}end'.format(logger_method))
 
 
 def calcQuarter(quarter_date):
@@ -666,6 +880,12 @@ def calcQuarter(quarter_date):
     elif quarter == '4':
         quarter_month = '12'
     return str(quarter_date.year) + quarter_month
+
+
+# 8년전 1분기를 계산할수 있는 가장 오래된 분기로 설정.
+def calcFirstQuarterOfMinYear(quarter_date):
+    qt = datetime.date(quarter_date.year - 8, 3, 1)
+    return qt.strftime('%Y%m')
 
 
 def calcQuarterCode(quarter_date: datetime.datetime):

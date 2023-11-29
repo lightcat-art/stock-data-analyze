@@ -9,7 +9,7 @@ import traceback
 import datetime
 from ..config.stockConfig import BATCH_HOUR, BATCH_MIN, BATCH_SEC, BATCH_TEST, \
     ETC_BATCH_HOUR, ETC_BATCH_MIN, ETC_BATCH_SEC, \
-    FUND_BATCH_HOUR, FUND_BATCH_MIN, FUND_BATCH_SEC
+    FUND_BATCH_HOUR, FUND_BATCH_MIN, FUND_BATCH_SEC, FUND_RETRY
 import logging
 
 logger = logging.getLogger('batch')
@@ -42,38 +42,38 @@ class operator:
             # The 'date' trigger and datetime.now() as run_date are implicit
             self.scheduler.add_job(manage_event_init, 'date', run_date=today_org + datetime.timedelta(seconds=10),
                                    id='manage_event_init', replace_existing=True)
-
-            daily_batch_time = None
-            if BATCH_TEST:
-                daily_batch_time = today_org + datetime.timedelta(seconds=20)
-            else:
-                daily_batch_time = datetime.datetime.combine(
-                    datetime.date(today_org.year, today_org.month, today_org.day),
-                    datetime.time(BATCH_HOUR, BATCH_MIN, BATCH_SEC))
-
-            self.scheduler.add_job(manage_event_daily, 'cron', hour=daily_batch_time.hour,
-                                   minute=daily_batch_time.minute,
-                                   second=daily_batch_time.second,
-                                   id='manage_event_daily',
-                                   replace_existing=True)
-
-            # The 'date' trigger and datetime.now() as run_date are implicit
-            self.scheduler.add_job(manage_event_init_etc, 'date', run_date=today_org + datetime.timedelta(seconds=30),
-                                   id='manage_event_init_etc', replace_existing=True)
-
-            etc_daily_batch_time = None
-            if BATCH_TEST:
-                etc_daily_batch_time = today_org + datetime.timedelta(seconds=40)
-            else:
-                etc_daily_batch_time = datetime.datetime.combine(
-                    datetime.date(today_org.year, today_org.month, today_org.day),
-                    datetime.time(ETC_BATCH_HOUR, ETC_BATCH_MIN, ETC_BATCH_SEC))
-
-            self.scheduler.add_job(manage_event_daily_etc, 'cron', hour=etc_daily_batch_time.hour,
-                                   minute=etc_daily_batch_time.minute,
-                                   second=etc_daily_batch_time.second,
-                                   id='manage_event_daily_etc',
-                                   replace_existing=True)
+            #
+            # daily_batch_time = None
+            # if BATCH_TEST:
+            #     daily_batch_time = today_org + datetime.timedelta(seconds=20)
+            # else:
+            #     daily_batch_time = datetime.datetime.combine(
+            #         datetime.date(today_org.year, today_org.month, today_org.day),
+            #         datetime.time(BATCH_HOUR, BATCH_MIN, BATCH_SEC))
+            #
+            # self.scheduler.add_job(manage_event_daily, 'cron', hour=daily_batch_time.hour,
+            #                        minute=daily_batch_time.minute,
+            #                        second=daily_batch_time.second,
+            #                        id='manage_event_daily',
+            #                        replace_existing=True)
+            #
+            # # The 'date' trigger and datetime.now() as run_date are implicit
+            # self.scheduler.add_job(manage_event_init_etc, 'date', run_date=today_org + datetime.timedelta(seconds=30),
+            #                        id='manage_event_init_etc', replace_existing=True)
+            #
+            # etc_daily_batch_time = None
+            # if BATCH_TEST:
+            #     etc_daily_batch_time = today_org + datetime.timedelta(seconds=40)
+            # else:
+            #     etc_daily_batch_time = datetime.datetime.combine(
+            #         datetime.date(today_org.year, today_org.month, today_org.day),
+            #         datetime.time(ETC_BATCH_HOUR, ETC_BATCH_MIN, ETC_BATCH_SEC))
+            #
+            # self.scheduler.add_job(manage_event_daily_etc, 'cron', hour=etc_daily_batch_time.hour,
+            #                        minute=etc_daily_batch_time.minute,
+            #                        second=etc_daily_batch_time.second,
+            #                        id='manage_event_daily_etc',
+            #                        replace_existing=True)
 
             fund_daily_batch_time = None
             if BATCH_TEST:
@@ -83,11 +83,16 @@ class operator:
                     datetime.date(today_org.year, today_org.month, today_org.day),
                     datetime.time(FUND_BATCH_HOUR, FUND_BATCH_MIN, FUND_BATCH_SEC))
 
-            self.scheduler.add_job(manage_fundamental_daily, 'cron', hour=fund_daily_batch_time.hour,
-                                   minute=fund_daily_batch_time.minute,
-                                   second=fund_daily_batch_time.second,
-                                   id='manage_fundamental_daily',
-                                   replace_existing=True)
+            if FUND_RETRY:
+                # 추후 횟수제한이 필요하다면 FUND_RETRY를 이용하여 RETRY_Manager를 생성하여 횟수 제어
+                self.scheduler.add_job(manage_fundamental_daily, 'interval', seconds=30, id='manage_fundamental_daily',
+                                       replace_existing=True)
+            else:
+                self.scheduler.add_job(manage_fundamental_daily, 'cron', hour=fund_daily_batch_time.hour,
+                                       minute=fund_daily_batch_time.minute,
+                                       second=fund_daily_batch_time.second,
+                                       id='manage_fundamental_daily',
+                                       replace_existing=True)
 
             self.scheduler.add_job(validate_connection, 'interval', hours=2, id='validate_connection',
                                    replace_existing=True)
