@@ -1,7 +1,7 @@
 import enum
 
 
-class DartConfig:
+class DartFinstateConfig:
     column_amount = 'thstrm_amount'  # 금액 컬럼명
     column_standard_code = 'account_id'  # 표준계정코드 컬럼명
     column_account_nm = 'account_nm'  # 재무항목명
@@ -309,3 +309,30 @@ class DartConfig:
             else:
                 financing_cash_flow_id_condition = df[self.column_standard_code] == item
         return financing_cash_flow_id_condition & (df[self.column_table_type] == self.table_type_cf)
+
+
+class DartStockTotQyStatusConfig:
+
+    column_amount = 'thstrm_amount'  # 금액 컬럼명
+    column_standard_code = 'account_id'  # 표준계정코드 컬럼명
+    column_account_nm = 'account_nm'  # 재무항목명
+
+    column_table_type = 'sj_div'  # 표 종류 컬럼명
+    table_type_bs = 'BS'  # 재무상태표
+    table_type_is = 'IS'  # 손익계산서
+    table_type_cis = 'CIS'  # 포괄손익계산서
+    table_type_cf = 'CF'  # 현금흐름표
+
+    assets_id_list = ['ifrs-full_Assets', 'ifrs_Assets']  # 자산총계
+    assets_nm_list = ['자산총계']
+
+    def assets_condition(self, df):
+        assets_id_condition = None
+        for i, item in enumerate(self.assets_id_list):
+            if assets_id_condition is not None:
+                assets_id_condition = assets_id_condition | (df[self.column_standard_code] == item)
+            else:
+                assets_id_condition = df[self.column_standard_code] == item
+        for i, item in enumerate(self.assets_nm_list):
+            assets_id_condition = assets_id_condition | (df[self.column_account_nm] == item)
+        return assets_id_condition & (df[self.column_table_type] == self.table_type_bs)

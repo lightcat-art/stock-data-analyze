@@ -1,9 +1,9 @@
 from pykrx.website import krx
 from pykrx import stock
 import datetime
-from backend.stocksimul.custom.opendartreader.dart import OpenDartReader
+import OpenDartReader
 from backend.stocksimul.custom.opendartreader.dart_manager import DartManager
-from backend.stocksimul.custom.opendartreader.dart_config import DartConfig
+from backend.stocksimul.custom.opendartreader.dart_config import DartFinstateConfig
 from backend.stocksimul.custom import pykrx as stock_custom
 import logging
 
@@ -80,65 +80,65 @@ def dart_finstate_all(event_name: str = None, year: int = None, qt: str = None):
     print(finstate)
     if finstate is not None:
         assets = int(
-            finstate.loc[DartConfig().assets_condition(finstate)].iloc[0][DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().assets_condition(finstate)].iloc[0][DartFinstateConfig().column_amount])
         current_assets = int(
-            finstate.loc[DartConfig().current_assets_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().current_assets_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         non_current_assets = int(
-            finstate.loc[DartConfig().non_current_assets_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().non_current_assets_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         liabilities = int(
-            finstate.loc[DartConfig().liabilities_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().liabilities_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         current_liabilities = int(
-            finstate.loc[DartConfig().current_liabilities_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().current_liabilities_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         non_current_liabilities = int(
-            finstate.loc[DartConfig().non_current_liabilities_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().non_current_liabilities_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         equity = int(
-            finstate.loc[DartConfig().equity_condition(finstate)].iloc[0][DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().equity_condition(finstate)].iloc[0][DartFinstateConfig().column_amount])
         equity_control = int(
-            finstate.loc[DartConfig().equity_control_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().equity_control_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         equity_non_control_org = \
-            finstate.loc[DartConfig().equity_non_control_condition(finstate)].iloc[0][
-                DartConfig().column_amount]
+            finstate.loc[DartFinstateConfig().equity_non_control_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount]
         equity_non_control = None if equity_non_control_org == '' else int(equity_non_control_org)
         revenue = int(
-            finstate.loc[DartConfig().revenue_condition(finstate)].iloc[0][DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().revenue_condition(finstate)].iloc[0][DartFinstateConfig().column_amount])
         cost_of_sales = int(
-            finstate.loc[DartConfig().cost_of_sales_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().cost_of_sales_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         gross_profit = int(
-            finstate.loc[DartConfig().gross_profit_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().gross_profit_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         operating_income_loss = int(
-            finstate.loc[DartConfig().operating_income_loss_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().operating_income_loss_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         profit_loss = int(
-            finstate.loc[DartConfig().profit_loss_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().profit_loss_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         profit_loss_control = int(
-            finstate.loc[DartConfig().profit_loss_control_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().profit_loss_control_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         profit_loss_non_control = int(
-            finstate.loc[DartConfig().profit_loss_non_control_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().profit_loss_non_control_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         profit_loss_before_tax = int(
-            finstate.loc[DartConfig().profit_loss_before_tax_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().profit_loss_before_tax_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         # eps = int(
-        #     finstate.loc[DartConfig().eps_condition(finstate)].iloc[0][DartConfig().column_amount])
+        #     finstate.loc[DartFinstateConfig().eps_condition(finstate)].iloc[0][DartFinstateConfig().column_amount])
         investing_cash_flow = int(
-            finstate.loc[DartConfig().investing_cash_flow_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().investing_cash_flow_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         operating_cash_flow = int(
-            finstate.loc[DartConfig().operating_cash_flow_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().operating_cash_flow_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
         financing_cash_flow = int(
-            finstate.loc[DartConfig().financing_cash_flow_condition(finstate)].iloc[0][
-                DartConfig().column_amount])
+            finstate.loc[DartFinstateConfig().financing_cash_flow_condition(finstate)].iloc[0][
+                DartFinstateConfig().column_amount])
 
         print(
             'assets={}\n'
@@ -157,6 +157,19 @@ def dart_finstate_all(event_name: str = None, year: int = None, qt: str = None):
                                               investing_cash_flow, operating_cash_flow, financing_cash_flow
                                               ))
 
+
+def get_stock_tot_qy_state(event_name: str = None, year: int = None, qt: str = None):
+    reprt_code = calcQuarterCodeFromNumber(qt)
+    stocktotco_state = None
+    try:
+        stocktotco_state = DartManager.instance().get_dart().report(event_name,
+                                                                    'stockTotqySttus',
+                                                                    year, reprt_code)
+    except Exception as e:
+        logger.exception('get finstate request over-limited')
+    if stocktotco_state is not None:
+        print(stocktotco_state)
+        
 
 def test_custom_krx_api():
     print(stock_custom.get_market_ohlcv_by_ticker(date='231122', market="ALL"))
@@ -191,6 +204,7 @@ def strComparison(qt1, qt2):
 
 
 if __name__ == "__main__":
+    get_stock_tot_qy_state()
     """
     # assets 관련
     # dart_finstate_all('KG모빌리티', 2021, '1')
@@ -238,7 +252,7 @@ if __name__ == "__main__":
     # dart_finstate_all('KC코트렐', 2016, '1')  # 지배누락(속성없음), 매출액 매출원가 누락 (완료)
     # dart_finstate_all('KD', 2019, '1')  # 자본 지배누락 (자본 name 추가, 지배 속성없음)
     # dart_finstate_all('KG모빌리티', 2019, '1')  # 자본 비지배누락 (비지배는 계산산 0, 자본 name 속성 추가)
-    dart_finstate_all('웹스', 2022, '1')  # 지배 비지배 누락 (속성 없음)
+    # dart_finstate_all('웹스', 2022, '1')  # 지배 비지배 누락 (속성 없음)
 
     """
         # 149 KG케미칼 까지 당기순이익 관련 체크
