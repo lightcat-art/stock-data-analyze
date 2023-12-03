@@ -23,7 +23,7 @@ from pandas import Series, DataFrame
 
 @dataframe_empty_handler
 def get_market_ohlcv_by_date_all(fromdate: str, todate: str, ticker: str,
-                             adjusted: bool = True) -> DataFrame:
+                                 adjusted: bool = True) -> DataFrame:
     """일자별로 정렬된 특정 종목의 OHLCV
 
     Args:
@@ -50,9 +50,9 @@ def get_market_ohlcv_by_date_all(fromdate: str, todate: str, ticker: str,
     df = 개별종목시세().fetch(fromdate, todate, isin, adjusted)
     # FLUC_TP_CD : (1: up / 2:down / 3:same)
     df = df[['TRD_DD', 'TDD_OPNPRC', 'TDD_HGPRC', 'TDD_LWPRC', 'TDD_CLSPRC',
-             'ACC_TRDVOL', 'ACC_TRDVAL', 'FLUC_RT', 'MKTCAP', 'LIST_SHRS']]
+             'ACC_TRDVOL', 'ACC_TRDVAL', 'FLUC_RT', 'FLUC_TP_CD', 'CMPPREVDD_PRC', 'MKTCAP', 'LIST_SHRS']]
     df.columns = ['날짜', '시가', '고가', '저가', '종가', '거래량', '거래대금',
-                  '등락률', '시가총액', '상장주식수']
+                  '등락률', '등락유형', '등락폭', '시가총액', '상장주식수']
     df = df.set_index('날짜')
     df.index = pd.to_datetime(df.index, format='%Y/%m/%d')
     df = df.replace(r'[^-\w\.]', '', regex=True)
@@ -92,9 +92,10 @@ def get_market_ohlcv_by_ticker_all(date: str, market: str = "KOSPI") -> DataFram
 
     df = 전종목시세().fetch(date, market2mktid[market])
     df = df[['ISU_SRT_CD', 'TDD_OPNPRC', 'TDD_HGPRC', 'TDD_LWPRC',
-             'TDD_CLSPRC', 'ACC_TRDVOL', 'ACC_TRDVAL', 'FLUC_RT', 'MKTCAP', 'LIST_SHRS', 'MKT_NM']]
+             'TDD_CLSPRC', 'ACC_TRDVOL', 'ACC_TRDVAL', 'FLUC_RT',
+             'FLUC_TP_CD', 'CMPPREVDD_PRC', 'MKTCAP', 'LIST_SHRS', 'MKT_NM']]
     df.columns = ['티커', '시가', '고가', '저가', '종가', '거래량', '거래대금',
-                  '등락률', '시가총액', '상장주식수', '시장']
+                  '등락률', '등락유형', '등락폭', '시가총액', '상장주식수', '시장']
     df = df.replace(r'[^-\w\.]', '', regex=True)
     df = df.replace(r'\-$', '0', regex=True)
     df = df.replace('', '0')

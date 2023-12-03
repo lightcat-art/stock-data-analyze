@@ -169,10 +169,31 @@ def get_stock_tot_qy_state(event_name: str = None, year: int = None, qt: str = N
         logger.exception('get finstate request over-limited')
     if stocktotco_state is not None:
         print(stocktotco_state)
-        
 
-def test_custom_krx_api():
-    print(stock_custom.get_market_ohlcv_by_ticker(date='231122', market="ALL"))
+
+def get_market_sector_classifications_test(date: str, market: str):
+    print(stock.get_market_sector_classifications(date, market))
+
+
+def get_market_price_change_by_ticker_test():
+    stock.get_market_price_change_by_ticker(fromdate='20231201', todate='20231201', market="KOSPI")
+
+
+def test_custom_krx_api_by_ticker():
+    df = stock_custom.get_market_ohlcv_by_ticker(date='231203', market="ALL")
+    for k, v in df.to_dict('index').items():
+        if k == '035760':
+            print(v)
+        # if v['시장'] != 'KOSPI' and v['시장'] != 'KOSDAQ' and v['시장'] != 'KONEX':
+        #     print(v['시장'])
+        if v['시장'] == 'KONEX':
+            print('k={}, v={}'.format(k, v))
+
+        # print('key = {}'.format(k))
+        # print('value = {}, valueType = {}'.format(v, type(v)))
+        #
+        # v.pop('시장')
+        # print('change value = {}'.format(v))
 
 
 def date_comparison():
@@ -204,7 +225,9 @@ def strComparison(qt1, qt2):
 
 
 if __name__ == "__main__":
-    get_stock_tot_qy_state('KG모빌리티', 2021, '1')
+    # get_stock_tot_qy_state('KG모빌리티', 2021, '1')
+    # get_market_sector_classifications_test("20231201", "KOSPI")
+    test_custom_krx_api_by_ticker()
     """
     # assets 관련
     # dart_finstate_all('KG모빌리티', 2021, '1')

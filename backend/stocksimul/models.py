@@ -21,6 +21,8 @@ class EventInfo(models.Model):
     stock_event_id = models.BigAutoField(primary_key=True)
     event_code = models.CharField(max_length=10)
     event_name = models.CharField(max_length=200)
+    description = models.TextField(null=True)
+    mkt_nm = models.CharField(max_length=3, null=True)  # 11 : KOSPI / 12: KOSDAQ / 13 : KONEX
 
     # def __str__(self):
     #     return self.event_name
@@ -53,6 +55,10 @@ class PriceInfo(models.Model):
     volume = models.IntegerField(null=True)
     value = models.BigIntegerField(null=True)
     up_down_rate = models.FloatField(null=True)
+    # up_down_sort = models.CharField(max_length=2, null=True)
+    # up_down_value = models.IntegerField(null=True)
+    # market_cap = models.BigIntegerField(null=True)
+    # listed_shares = models.BigIntegerField(null=True)
 
     objects = models.Manager()
 
@@ -72,6 +78,8 @@ class NotAdjPriceInfo(models.Model):
     volume = models.IntegerField(null=True)
     value = models.BigIntegerField(null=True)
     up_down_rate = models.FloatField(null=True)
+    up_down_sort = models.CharField(max_length=2, null=True)
+    up_down_value = models.IntegerField(null=True)
     market_cap = models.BigIntegerField(null=True)
     listed_shares = models.BigIntegerField(null=True)
 

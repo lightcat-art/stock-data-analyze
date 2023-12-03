@@ -176,14 +176,20 @@ def manage_event_daily():
         if cur_event_info.count() != 0:
             logger.info('{}first_batch executing status = {}'.format(logger_method, first))
             if not first:
-                price_info_df = stock_custom.get_market_ohlcv_by_ticker(date=today, market='ALL')
+                price_info_df = stock.get_market_ohlcv_by_ticker(date=today, market='ALL')
                 # 전체종목에 대해 시가,종가,고가,저가 가 모두 0이면 휴일으로 간주하고 스킵.
                 holiday = (price_info_df[['시가', '고가', '저가', '종가']] == 0).all(axis=None)
                 # stockprice 테이블 업데이트 - 신규/기존 종목
                 # price_info_df = price_info.reset_index() # 종목코드를 컬럼으로 빼기.
+                price_info_df = price_info_df.replace({np.nan: None})
                 price_info_df.rename(
-                    columns={'티커': 'event_code', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
-                             '저가': 'low', '거래대금': 'value', '등락률': 'up_down_rate', '시장': 'mkt_nm'}, inplace=True)
+                    columns={'시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
+                             '저가': 'low', '거래대금': 'value', '등락률': 'up_down_rate',
+                             # '시장': 'mkt_nm', '등락여부': 'up_down_sort',
+                             # '등락폭': 'up_down_value', '시가총액': 'market_cap',
+                             # '상장주식수': 'listed_shares'
+                             }, inplace=True)
+
                 price_info_df['date'] = datetime.datetime.now()
 
                 # if not holiday:
@@ -286,6 +292,7 @@ def manage_event_daily():
                                                                                 todate=todate,
                                                                                 ticker=k)
                             if len(omit_price_info_df) != 0:  # 휴일에 의한 업데이트 시간차 발생 경우 제외
+                                omit_price_info_df = omit_price_info_df.replace({np.nan: None})
                                 omit_price_info_df = omit_price_info_df.reset_index()
                                 omit_price_info_df.rename(
                                     columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume',
@@ -302,6 +309,9 @@ def manage_event_daily():
                             logger.info('{}{} : updating omitted informations complete'.format(logger_method, k))
 
                         if not holiday:
+                            # mkt_nm 은 eventinfo 테이블에 넣기 위한 정보이므로 priceinfo 테이블에 넣기전에 빼기.
+                            # event_mkt_nm = v['mkt_nm']
+                            # v.pop('mkt_nm')
                             if not new_event_yn:
                                 event_status = InfoUpdateStatus.objects.filter(
                                     stock_event_id=event_info.first().stock_event_id).filter(table_type='P')
@@ -340,8 +350,8 @@ def manage_event_daily():
                                 entry.save()
 
                             # 시장명 다르거나 없다면 업데이트
-                            if event_info.first().mkt_nm is None or event_info.first().mkt_nm != v['mkt_nm']:
-                                event_info.update(mkt_nm=v['mkt_nm'])
+                            # if event_info.first().mkt_nm is None or event_info.first().mkt_nm != event_mkt_nm:
+                            #     event_info.update(mkt_nm=event_mkt_nm)
 
                         event_status = InfoUpdateStatus.objects.filter(
                             stock_event_id=event_info.first().stock_event_id).filter(table_type='P')
@@ -395,7 +405,8 @@ def manage_event_init_etc():
                         '{}{} incompleted or not inserted. delete and re-insert.'.format(logger_method,
                                                                                          cur_event.event_code))
                     not_adj_price = NotAdjPriceInfo.objects.filter(stock_event_id=cur_event.stock_event_id)
-                    not_adj_price.delete()
+                    if not_adj_price.count() != 0:
+                        not_adj_price.delete()
 
                 # price_info 테이블에서 주가 시작날짜 조회
                 start_price_info = PriceInfo.objects.filter(
@@ -410,8 +421,10 @@ def manage_event_init_etc():
 
                 not_adj_price_info = not_adj_price_info.reset_index()
                 not_adj_price_info.rename(
-                    columns={'날짜': 'date', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high', '저가': 'low',
+                    columns={'날짜': 'date', '시가': 'open', '종가': 'close',
+                             '거래량': 'volume', '고가': 'high', '저가': 'low',
                              '거래대금': 'value', '등락률': 'up_down_rate',
+                             '등락유형': 'up_down_sort', '등락폭': 'up_down_value',
                              '시가총액': 'market_cap', '상장주식수': 'listed_shares'},
                     inplace=True)
                 # stockprice 테이블에 insert
@@ -474,18 +487,21 @@ def manage_event_daily_etc():
             date__range=[event_status.first()[0] + datetime.timedelta(days=1), today_org])
         not_adj_delete_by_date.delete()
         scan_date = event_status.first()[0]
-        while scan_date != today_org.date():
+        while scan_date != today_org.date():  # 날짜별 INSERT
             scan_date += datetime.timedelta(days=1)
             scan_date_str = scan_date.strftime('%Y%m%d')
             not_adj_price_info = stock_custom.get_market_ohlcv_by_ticker(date=scan_date_str, market="ALL")
             holiday = (not_adj_price_info[['시가', '고가', '저가', '종가']] == 0).all(axis=None)
             if holiday:
                 continue
-            not_adj_price_info = not_adj_price_info[['티커', '시가', '고가', '저가', '종가', '거래량', '거래대금',
-                                                     '등락률', '시가총액', '상장주식수']]
+
+            not_adj_price_info = not_adj_price_info.replace({np.nan: None})
+            # not_adj_price_info = not_adj_price_info[['티커', '시가', '고가', '저가', '종가', '거래량', '거래대금',
+            #                                          '등락률', '등락유형', '등락폭', '시가총액', '상장주식수']]
             not_adj_price_info.rename(
                 columns={'티커': 'event_code', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
                          '저가': 'low', '거래대금': 'value', '등락률': 'up_down_rate',
+                         '등락유형': 'up_down_sort', '등락폭': 'up_down_value', '시장': 'mkt_nm',
                          '시가총액': 'market_cap', '상장주식수': 'listed_shares'}, inplace=True)
             not_adj_price_info['date'] = scan_date
 
@@ -494,15 +510,37 @@ def manage_event_daily_etc():
                     if BATCH_TEST_CODE_YN:
                         if k not in BATCH_TEST_CODE_LIST:
                             continue
+
                     event_info = EventInfo.objects.filter(event_code=k)
-                    if event_info.count() == 0:  # 가격정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
+
+                    if event_info.count() == 0:  # 가격정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 SKIP
                         # logger.error('{}KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(logger_method, k))
                         continue
+                    else:  # 종목정보에 등록도 되어있으나, 미수정종가테이블에 아예 INSERT가 되지 않았다면 SKIP
+                        before_not_adj_price_info = NotAdjPriceInfo.objects.filter(
+                            stock_event_id=event_info.first().stock_event_id)
+                        if before_not_adj_price_info.count() == 0:
+                            continue
+
+                    # mkt_nm 은 eventinfo 테이블에 넣기 위한 정보이므로 priceinfo 테이블에 넣기전에 빼기.
+                    event_mkt_nm = None
+                    if v['mkt_nm'] == 'KOSPI':
+                        event_mkt_nm = '11'
+                    elif v['mkt_nm'] == 'KOSDAQ' or v['mkt_nm'] == 'KOSDAQGLOBAL':
+                        event_mkt_nm = '12'
+                    elif v['mkt_nm'] == 'KONEX':
+                        event_mkt_nm = '13'
+                    v.pop('mkt_nm')
+
                     if v['open'] != 0 and v['high'] != 0 and v['low'] != 0 and v['close'] != 0:
                         # logger.info('금일 주가 INSERT : code=' + k, )
                         entry = NotAdjPriceInfo(**v)
                         entry.stock_event_id = event_info.first().stock_event_id
                         entry.save()
+
+                    # 시장명 다르거나 없다면 업데이트
+                    if event_info.first().mkt_nm is None or event_info.first().mkt_nm != event_mkt_nm:
+                        event_info.update(mkt_nm=event_mkt_nm)
 
                     event_status = InfoUpdateStatus.objects.filter(
                         stock_event_id=event_info.first().stock_event_id).filter(table_type='N')
@@ -611,7 +649,7 @@ def manage_fundamental_daily():
                     if isinstance(e, ValueError):
                         if isinstance(e.args, tuple) and e.args[0].startswith('could not find'):
                             logger.error('could not find corps code {}. skip.'.format(event_info.event_name))
-                        elif isinstance(e.args, dict):
+                        else:
                             STOP_BATCH_TF = True
                             break
                     else:
