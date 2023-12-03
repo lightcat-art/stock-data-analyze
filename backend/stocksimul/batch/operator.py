@@ -2,7 +2,7 @@ from apscheduler.schedulers.background import BackgroundScheduler, BlockingSched
 from apscheduler.triggers.cron import CronTrigger
 from django.conf import settings
 from django_apscheduler.jobstores import DjangoJobStore
-from .stock_data_manage import manage_event_init, manage_event_daily, validate_connection, manage_fundamental_daily, \
+from .stock_batch import manage_event_init, manage_event_daily, validate_connection, manage_fundamental_daily, \
     manage_event_init_etc, manage_event_daily_etc
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 import traceback

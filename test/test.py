@@ -163,7 +163,7 @@ def get_stock_tot_qy_state(event_name: str = None, year: int = None, qt: str = N
     stocktotco_state = None
     try:
         stocktotco_state = DartManager.instance().get_dart().report(event_name,
-                                                                    'stockTotqySttus',
+                                                                    '주식총수',
                                                                     year, reprt_code)
     except Exception as e:
         logger.exception('get finstate request over-limited')
@@ -204,7 +204,7 @@ def strComparison(qt1, qt2):
 
 
 if __name__ == "__main__":
-    get_stock_tot_qy_state()
+    get_stock_tot_qy_state('KG모빌리티', 2021, '1')
     """
     # assets 관련
     # dart_finstate_all('KG모빌리티', 2021, '1')

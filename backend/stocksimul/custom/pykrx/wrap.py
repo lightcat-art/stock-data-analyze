@@ -92,9 +92,9 @@ def get_market_ohlcv_by_ticker_all(date: str, market: str = "KOSPI") -> DataFram
 
     df = 전종목시세().fetch(date, market2mktid[market])
     df = df[['ISU_SRT_CD', 'TDD_OPNPRC', 'TDD_HGPRC', 'TDD_LWPRC',
-             'TDD_CLSPRC', 'ACC_TRDVOL', 'ACC_TRDVAL', 'FLUC_RT', 'MKTCAP', 'LIST_SHRS']]
+             'TDD_CLSPRC', 'ACC_TRDVOL', 'ACC_TRDVAL', 'FLUC_RT', 'MKTCAP', 'LIST_SHRS', 'MKT_NM']]
     df.columns = ['티커', '시가', '고가', '저가', '종가', '거래량', '거래대금',
-                  '등락률', '시가총액', '상장주식수']
+                  '등락률', '시가총액', '상장주식수', '시장']
     df = df.replace(r'[^-\w\.]', '', regex=True)
     df = df.replace(r'\-$', '0', regex=True)
     df = df.replace('', '0')
