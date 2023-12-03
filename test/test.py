@@ -224,10 +224,18 @@ def strComparison(qt1, qt2):
         print('{} is lower'.format(qt2))
 
 
+def flagComparison(code):
+    ERROR = 2 ** 10
+    EXECUTED = 2 ** 11
+    print(code & (EXECUTED | ERROR))
+    # if (code & (EXECUTED | ERROR)) != 0:
+    #     print('')
+
 if __name__ == "__main__":
-    # get_stock_tot_qy_state('KG모빌리티', 2021, '1')
+    get_stock_tot_qy_state('KG모빌리티', 2021, '1')
     # get_market_sector_classifications_test("20231201", "KOSPI")
-    test_custom_krx_api_by_ticker()
+    # test_custom_krx_api_by_ticker()
+    # flagComparison(2**11)
     """
     # assets 관련
     # dart_finstate_all('KG모빌리티', 2021, '1')

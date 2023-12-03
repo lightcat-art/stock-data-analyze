@@ -40,8 +40,8 @@ FUND_BATCH_SEC = 00
 # 개발
 BATCH_TEST = True  # 배치 테스트 여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
 SKIP_MANAGE_EVENT_INIT = False  # 추가할 종목이 있더라도 현재 DB에 등록된 종목만 사용하도록 INSERT 스킵여부 설부
-BATCH_TEST_CODE_YN = False  # 테스트시 특정 코드만 진행 여부
-BATCH_TEST_CODE_LIST = ['035760']  # 특정 종목 테스트 시 종목코드 지정
+BATCH_TEST_CODE_YN = True  # 테스트시 특정 코드만 진행 여부
+BATCH_TEST_CODE_LIST = ['001260']  # 특정 종목 테스트 시 종목코드 지정
 ETC_FIRST_BATCH_TODATE = '20231126'  # ETC 배치 작업 시 첫 INSERT의 todate 조회날짜를 일괄적으로 맞추기 위해 최근날짜를 수기로 지정.
-FUND_RETRY = True  # 재무정보 배치 실행 시 계속 일정간격마다 실행하도록 수정.
+# FUND_RETRY = False  # 재무정보 배치 실행 시 계속 일정간격마다 실행하도록 수정.
 FUND_API_REQUEST_TERM = 0.5

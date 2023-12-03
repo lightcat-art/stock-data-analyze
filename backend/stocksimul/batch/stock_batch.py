@@ -9,10 +9,12 @@ import numpy as np
 from numpy.lib import math
 import logging
 from ..config.stockConfig import BATCH_TEST_CODE_YN, BATCH_TEST_CODE_LIST, SKIP_MANAGE_EVENT_INIT, \
-    ETC_FIRST_BATCH_TODATE, FUND_RETRY, FUND_API_REQUEST_TERM
+    ETC_FIRST_BATCH_TODATE, FUND_API_REQUEST_TERM
 from ..custom.opendartreader.dart_manager import DartManager
 from ..custom.opendartreader.dart_config import DartFinstateConfig
 from ..custom import pykrx as stock_custom
+from .stock_batch_manager import StockBatchManager
+from .operator import operator
 
 '''
 1. api 통신을 통해 현재 마켓에 등록된 종목정보를 모두 받아온다.
@@ -49,7 +51,15 @@ def validate_connection():
         logger.exception('[validate_connection] error occured')
 
 
-# def make_sure_mysql_usable():
+def check_fundamental_daily_retry():
+    if not StockBatchManager.instance().is_execute_fund() and StockBatchManager.instance().is_retry_fund():
+        # job 새로 등록하기
+        operator.instance()
+        pass
+
+    # def make_sure_mysql_usable():
+
+
 #     from django.db import connection, connections
 #     # mysql is lazily connected to in django.
 #     # connection.connection is None means
@@ -556,9 +566,11 @@ def manage_event_daily_etc():
         logger.info('{}manage_event_init OR manage_evetn_init_etc executed. skip daily_etc'.format(logger_method))
 
 
-def manage_fundamental_daily():
+def manage_fundamental():
+    StockBatchManager.instance().set_execute_fund(True)
     logger_method = '[manage_fundamental_daily] '
     logger.info('{}start'.format(logger_method))
+
     while first:
         time.sleep(10)
         logger.info('{}waiting for manage_event_init to compelete'.format(logger_method))
@@ -583,7 +595,7 @@ def manage_fundamental_daily():
                 continue
 
         fund_retry_recent_id = 0
-        if FUND_RETRY:
+        if StockBatchManager.instance().is_retry_fund():
             fund_retry_recent_id = FundamentalInfo.objects.order_by('-stock_event_id')[:1].first().stock_event_id
             logger.info('{}FUND_RETRY. get recent stock_event_id in fundamental table. stock_event_id = {}'.format(
                 logger_method, fund_retry_recent_id))
@@ -591,9 +603,10 @@ def manage_fundamental_daily():
         STOP_BATCH_TF = False  # 예외상황이 발생하였을때, 작업중지플래그
         for event_info in all_event_info:
             if STOP_BATCH_TF:
+                logger.error('{}stop batch because of error'.format(logger_method))
                 break
             if fund_retry_recent_id > event_info.stock_event_id:
-                logger.info('skip stock_event_id = {}'.format(event_info.stock_event_id))
+                logger.info('{}skip stock_event_id = {}'.format(logger_method, event_info.stock_event_id))
                 continue
             if BATCH_TEST_CODE_YN:
                 if event_info.event_code not in BATCH_TEST_CODE_LIST:
@@ -649,11 +662,14 @@ def manage_fundamental_daily():
                     if isinstance(e, ValueError):
                         if isinstance(e.args, tuple) and e.args[0].startswith('could not find'):
                             logger.error('could not find corps code {}. skip.'.format(event_info.event_name))
-                        else:
+                        elif isinstance(e.args, dict) and (e.args['status'] == '020' or e.args['status'] == '800'
+                                                           or e.args['status'] == '901'):
                             STOP_BATCH_TF = True
+                            StockBatchManager.instance().set_retry_fund(False)
                             break
                     else:
                         STOP_BATCH_TF = True
+                        StockBatchManager.instance().set_retry_fund(True)
                         break
                 # logger.info('finstate = {}'.format(finstate))
                 if finstate is not None:
@@ -709,8 +725,9 @@ def manage_fundamental_daily():
                                     DartFinstateConfig().column_amount]
                             liabilities = 0 if liabilities_org == '' else int(liabilities_org)
                         except Exception as e:
-                            logger.error('{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
-                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                            logger.error(
+                                '{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
                         try:
                             current_liabilities_org = \
                                 finstate.loc[DartFinstateConfig().current_liabilities_condition(finstate)].iloc[0][
@@ -724,7 +741,8 @@ def manage_fundamental_daily():
 
                         try:
                             non_current_liabilities_org = \
-                                finstate.loc[DartFinstateConfig().non_current_liabilities_condition(finstate)].iloc[0][
+                                finstate.loc[DartFinstateConfig().non_current_liabilities_condition(finstate)].iloc[
+                                    0][
                                     DartFinstateConfig().column_amount]
                             non_current_liabilities = 0 if non_current_liabilities_org == '' else int(
                                 non_current_liabilities_org)
@@ -771,8 +789,9 @@ def manage_fundamental_daily():
                                     DartFinstateConfig().column_amount]
                             cost_of_sales = 0 if cost_of_sales_org == '' else int(cost_of_sales_org)
                         except Exception as e:
-                            logger.error('{}cost_of_sales error. event_name = {} / event_code = {} / scan_qt={}'.format(
-                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                            logger.error(
+                                '{}cost_of_sales error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
 
                         try:
                             gross_profit_org = \
@@ -780,11 +799,13 @@ def manage_fundamental_daily():
                                     DartFinstateConfig().column_amount]
                             gross_profit = 0 if gross_profit_org == '' else int(gross_profit_org)
                         except Exception as e:
-                            logger.error('{}gross_profit error. event_name = {} / event_code = {} / scan_qt={}'.format(
-                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                            logger.error(
+                                '{}gross_profit error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
                         try:
                             operating_income_loss_org = \
-                                finstate.loc[DartFinstateConfig().operating_income_loss_condition(finstate)].iloc[0][
+                                finstate.loc[DartFinstateConfig().operating_income_loss_condition(finstate)].iloc[
+                                    0][
                                     DartFinstateConfig().column_amount]
                             operating_income_loss = 0 if operating_income_loss_org == '' else int(
                                 operating_income_loss_org)
@@ -798,8 +819,9 @@ def manage_fundamental_daily():
                                     DartFinstateConfig().column_amount]
                             profit_loss = 0 if profit_loss_org == '' else int(profit_loss_org)
                         except Exception as e:
-                            logger.error('{}profit_loss error. event_name = {} / event_code = {} / scan_qt={}'.format(
-                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                            logger.error(
+                                '{}profit_loss error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
                         try:
                             profit_loss_control_org = \
                                 finstate.loc[DartFinstateConfig().profit_loss_control_condition(finstate)].iloc[0][
@@ -812,7 +834,8 @@ def manage_fundamental_daily():
                                     logger_method, event_info.event_name, event_info.event_code, scan_qt))
                         try:
                             profit_loss_non_control_org = \
-                                finstate.loc[DartFinstateConfig().profit_loss_non_control_condition(finstate)].iloc[0][
+                                finstate.loc[DartFinstateConfig().profit_loss_non_control_condition(finstate)].iloc[
+                                    0][
                                     DartFinstateConfig().column_amount]
                             profit_loss_non_control = 0 if profit_loss_non_control_org == '' else int(
                                 profit_loss_non_control_org)
@@ -822,7 +845,8 @@ def manage_fundamental_daily():
                                     logger_method, event_info.event_name, event_info.event_code, scan_qt))
                         try:
                             profit_loss_before_tax_org = \
-                                finstate.loc[DartFinstateConfig().profit_loss_before_tax_condition(finstate)].iloc[0][
+                                finstate.loc[DartFinstateConfig().profit_loss_before_tax_condition(finstate)].iloc[
+                                    0][
                                     DartFinstateConfig().column_amount]
                             profit_loss_before_tax = 0 if profit_loss_before_tax_org == '' else int(
                                 profit_loss_before_tax_org)
@@ -840,8 +864,9 @@ def manage_fundamental_daily():
                             investing_cash_flow = 0 if investing_cash_flow_org == '' else int(
                                 investing_cash_flow_org)
                         except Exception as e:
-                            logger.error('{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
-                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                            logger.error(
+                                '{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
                         try:
                             operating_cash_flow_org = \
                                 finstate.loc[DartFinstateConfig().operating_cash_flow_condition(finstate)].iloc[0][
@@ -849,8 +874,9 @@ def manage_fundamental_daily():
                             operating_cash_flow = 0 if operating_cash_flow_org == '' else int(
                                 operating_cash_flow_org)
                         except Exception as e:
-                            logger.error('{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
-                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                            logger.error(
+                                '{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
                         try:
                             financing_cash_flow_org = \
                                 finstate.loc[DartFinstateConfig().financing_cash_flow_condition(finstate)].iloc[0][
@@ -858,8 +884,9 @@ def manage_fundamental_daily():
                             financing_cash_flow = 0 if financing_cash_flow_org == '' else int(
                                 financing_cash_flow_org)
                         except Exception as e:
-                            logger.error('{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
-                                logger_method, event_info.event_name, event_info.event_code, scan_qt))
+                            logger.error(
+                                '{}liabilities error. event_name = {} / event_code = {} / scan_qt={}'.format(
+                                    logger_method, event_info.event_name, event_info.event_code, scan_qt))
 
                         recent_quarter = FundamentalInfo.objects.filter(
                             stock_event_id=event_info.stock_event_id) \
@@ -943,6 +970,9 @@ def manage_fundamental_daily():
                 # 다음 분기 계산
                 scan_qt = calcNextQuarter(scan_qt)
                 time.sleep(FUND_API_REQUEST_TERM)
+
+        if not STOP_BATCH_TF:
+            StockBatchManager.instance().set_retry_fund(False)
 
         logger.info('{}end'.format(logger_method))
 

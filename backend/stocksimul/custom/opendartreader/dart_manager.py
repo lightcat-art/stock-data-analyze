@@ -1,4 +1,4 @@
-import OpenDartReader
+from .dart import OpenDartReader
 from ...common.singleton import SingletonInstance
 
 

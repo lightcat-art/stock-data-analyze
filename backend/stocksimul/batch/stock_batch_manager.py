@@ -3,10 +3,10 @@ from ..common.singleton import SingletonInstance
 
 class StockBatchManager(SingletonInstance):
     def __init__(self):
-        self.STOP_FUNDAMENTAL_BATCH_REQUEST = False
+        self.RETRY_FUND = False
 
-    def is_fundamental_batch_stop_request(self):
-        return self.STOP_FUNDAMENTAL_BATCH_REQUEST
+    def is_retry_fund(self):
+        return self.RETRY_FUND
 
-    def set_fundamental_batch_stop_request(self, stopTF: bool):
-        self.STOP_FUNDAMENTAL_BATCH_REQUEST = stopTF
+    def set_retry_fund(self, retryTF: bool):
+        self.RETRY_FUND = retryTF
