@@ -162,15 +162,15 @@ def corp_codes(api_key):
         params = { 'crtfc_key': api_key, }
 
         r = requests.get(url, params=params)
-        try:
-            tree = ET.XML(r.content)
-            status = tree.find('status').text
-            message = tree.find('message').text
+        # try:
+        tree = ET.XML(r.content)
+        status = tree.find('status').text
+        message = tree.find('message').text
 
-            if status != '000':
-                raise ValueError({'status': status, 'message': message})
-        except ET.ParseError as e:
-            pass
+        if status != '000':
+            raise ValueError({'status': status, 'message': message})
+        # except ET.ParseError as e:
+        #     pass
 
         zf = zipfile.ZipFile(io.BytesIO(r.content))
         xml_data = zf.read('CORPCODE.xml')
