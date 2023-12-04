@@ -6,6 +6,7 @@ from backend.stocksimul.custom.opendartreader.dart_manager import DartManager
 from backend.stocksimul.custom.opendartreader.dart_config import DartFinstateConfig
 from backend.stocksimul.custom import pykrx as stock_custom
 import logging
+import xml.etree.ElementTree as ET
 
 logger = logging.getLogger('test')
 
@@ -231,11 +232,24 @@ def flagComparison(code):
     # if (code & (EXECUTED | ERROR)) != 0:
     #     print('')
 
+
+def raiseExceptionTest():
+    try:
+
+        raise ValueError('value error')
+    except ET.ParseError as e:
+        pass
+    result = 'result1'
+
+    return result
+
+
 if __name__ == "__main__":
-    get_stock_tot_qy_state('KG모빌리티', 2021, '1')
     # get_market_sector_classifications_test("20231201", "KOSPI")
     # test_custom_krx_api_by_ticker()
     # flagComparison(2**11)
+    # get_stock_tot_qy_state('삼성전자', 2022, '1')
+    print(raiseExceptionTest())
     """
     # assets 관련
     # dart_finstate_all('KG모빌리티', 2021, '1')

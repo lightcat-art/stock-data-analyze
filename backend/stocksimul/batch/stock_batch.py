@@ -14,7 +14,6 @@ from ..custom.opendartreader.dart_manager import DartManager
 from ..custom.opendartreader.dart_config import DartFinstateConfig
 from ..custom import pykrx as stock_custom
 from .stock_batch_manager import StockBatchManager
-from .operator import operator
 
 '''
 1. api 통신을 통해 현재 마켓에 등록된 종목정보를 모두 받아온다.
@@ -49,13 +48,6 @@ def validate_connection():
         # logger.info('[test_connection] event_info selected')
     except Exception as e:
         logger.exception('[validate_connection] error occured')
-
-
-def check_fundamental_daily_retry():
-    if not StockBatchManager.instance().is_execute_fund() and StockBatchManager.instance().is_retry_fund():
-        # job 새로 등록하기
-        operator.instance()
-        pass
 
     # def make_sure_mysql_usable():
 
@@ -567,7 +559,6 @@ def manage_event_daily_etc():
 
 
 def manage_fundamental():
-    StockBatchManager.instance().set_execute_fund(True)
     logger_method = '[manage_fundamental_daily] '
     logger.info('{}start'.format(logger_method))
 
@@ -601,6 +592,17 @@ def manage_fundamental():
                 logger_method, fund_retry_recent_id))
 
         STOP_BATCH_TF = False  # 예외상황이 발생하였을때, 작업중지플래그
+        STOP_BATCH_TF = manage_finstate(STOP_BATCH_TF, all_event_info, cur_qt, fund_retry_recent_id, logger_method)
+
+        if not STOP_BATCH_TF:
+            StockBatchManager.instance().set_retry_fund(False)
+
+        logger.info('{}end'.format(logger_method))
+
+
+def manage_finstate(STOP_BATCH_TF, all_event_info, cur_qt, fund_retry_recent_id, logger_method):
+    logger_method = '[manage_finstate] '
+    try:
         for event_info in all_event_info:
             if STOP_BATCH_TF:
                 logger.error('{}stop batch because of error'.format(logger_method))
@@ -631,8 +633,9 @@ def manage_fundamental():
             else:
                 scan_qt = calcNextQuarter(recent_quarter.first().quarter)
 
-            # 조회한 시작분기가 8년전 1분기보다 더 오래되었을때 최소조회분기를 8년전 1분기로 지정
-            min_qt = calcFirstQuarterOfMinYear(cur_datetime)
+            # 조회한 시작분기가 2015년 1분기보다 더 오래되었을때 최소조회분기를 2015년 1분기로 지정
+            # min_qt = calcFirstQuarterOfMinYear(cur_datetime)
+            min_qt = '201503'
             if min_qt > scan_qt:
                 scan_qt = min_qt
 
@@ -654,9 +657,6 @@ def manage_fundamental():
                 try:
                     finstate = DartManager.instance().get_dart().finstate_all(event_info.event_name, scan_date.year,
                                                                               quarter_code)
-                    # stocktotco_state = DartManager.instance().get_dart().report(event_info.event_name,
-                    #                                                            '주식총수',
-                    #                                                            scan_date.year, quarter_code)
                 except Exception as e:
                     logger.exception('get request error')
                     if isinstance(e, ValueError):
@@ -963,18 +963,14 @@ def manage_fundamental():
                             '{}error occured. event_name = {} / event_code = {} / scan_qt={}'.format(
                                 logger_method, event_info.event_name, event_info.event_code, scan_qt))
 
-                    # finstate가 정상적으로 가져와진 경우에만 주식의 총수 같이 insert
-                    if stocktotco_state is not None:
-                        # 작업필요.
-                        pass
                 # 다음 분기 계산
                 scan_qt = calcNextQuarter(scan_qt)
                 time.sleep(FUND_API_REQUEST_TERM)
-
-        if not STOP_BATCH_TF:
-            StockBatchManager.instance().set_retry_fund(False)
-
-        logger.info('{}end'.format(logger_method))
+    except Exception as e:
+        STOP_BATCH_TF = True
+        StockBatchManager.instance().set_retry_fund(False)
+        logger.exception('{} error occured. stop request')
+    return STOP_BATCH_TF
 
 
 def calcQuarter(quarter_date):

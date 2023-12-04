@@ -3,7 +3,7 @@ from apscheduler.triggers.cron import CronTrigger
 from django.conf import settings
 from django_apscheduler.jobstores import DjangoJobStore
 from .stock_batch import manage_event_init, manage_event_daily, validate_connection, manage_fundamental, \
-    manage_event_init_etc, manage_event_daily_etc, check_fundamental_daily_retry
+    manage_event_init_etc, manage_event_daily_etc
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 import traceback
 import datetime
@@ -111,10 +111,12 @@ class operator:
         if event.job_id == 'manage_fundamental':
             if (event.code & EVENT_JOB_ERROR) != 0 or (
                     ((event.code & EVENT_JOB_EXECUTED) != 0) and StockBatchManager.instance().is_retry_fund()):
+                logger.info('transfrom manage_fundamental to interval because of retry request')
                 self.scheduler.add_job(manage_fundamental, 'interval', seconds=30, id='manage_fundamental',
                                        replace_existing=True)
                 pass
             elif ((event.code & EVENT_JOB_EXECUTED) != 0) and not StockBatchManager.instance().is_retry_fund():
+                logger.info('recover manage_fundamental to origin cron batch.')
                 self.scheduler.add_job(manage_fundamental, 'cron', hour=self.fund_batch_time.hour,
                                        minute=self.fund_batch_time.minute,
                                        second=self.fund_batch_time.second,

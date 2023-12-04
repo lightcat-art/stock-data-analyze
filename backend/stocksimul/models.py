@@ -109,6 +109,8 @@ class FundamentalInfo(models.Model):
     stock_event_id = models.IntegerField(null=True)
     quarter = models.CharField(max_length=6, null=True)  # 분기명
     stock_tot_co = models.BigIntegerField(null=True)  # 총 발행 주식수
+    stock_normal_co = models.BigIntegerField(null=True) # 보통주 발행 주식수
+    stock_prior_co = models.BigIntegerField(null=True) # 우선주 발행 주식수
     cap = models.BigIntegerField(null=True)  # 시가총액
     eps = models.IntegerField(null=True)  # 주당순이익
     bps = models.IntegerField(blank=True, null=True)  # 주당순자산가치
