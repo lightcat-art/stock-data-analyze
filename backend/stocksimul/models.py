@@ -46,7 +46,7 @@ class SimulResult(models.Model):
 class PriceInfo(models.Model):
     # 기본적으로 django가 auto-increment id를 생성하기 때문에, 명시적으로 생성할 pk에는 primary_key 옵션을 넣어주어야 한다.
     stock_price_id = models.BigAutoField(primary_key=True)
-    stock_event_id = models.IntegerField(null=True)
+    stock_event_id = models.IntegerField(default=-1)
     date = models.DateField()
     open = models.IntegerField(null=True)
     close = models.IntegerField(null=True)
@@ -69,7 +69,7 @@ class PriceInfo(models.Model):
 
 class NotAdjPriceInfo(models.Model):
     not_adj_price_id = models.BigAutoField(primary_key=True)
-    stock_event_id = models.IntegerField(null=True)
+    stock_event_id = models.IntegerField(default=-1)
     date = models.DateField()
     open = models.IntegerField(null=True)
     close = models.IntegerField(null=True)
@@ -94,8 +94,8 @@ class NotAdjPriceInfo(models.Model):
 
 class InfoUpdateStatus(models.Model):
     stock_info_update_status_id = models.AutoField(primary_key=True)
-    table_type = models.CharField(max_length=1)  # 'P' : 주가테이블, 'E' : 종목코드테이블, 'N' : KRX-API에서 가져온 미수정종가
-    stock_event_id = models.IntegerField(null=True)
+    table_type = models.CharField(max_length=1)  # 'P' : priceinfo, 'N' : notadjpriceinfo, 'I' : financial indicator
+    stock_event_id = models.IntegerField(default=-1)
 
     update_type = models.CharField(max_length=1, default='N')  # N : 업데이트안됨, U : 업데이트완료
     mod_dt = models.DateField()
@@ -106,7 +106,7 @@ class InfoUpdateStatus(models.Model):
 
 class FinancialIndicator(models.Model):
     fi_info_id = models.AutoField(primary_key=True)
-    stock_event_id = models.IntegerField(null=True)
+    stock_event_id = models.IntegerField(default=-1)
     date = models.DateField()
     bps = models.FloatField(null=True)
     per = models.FloatField(null=True)

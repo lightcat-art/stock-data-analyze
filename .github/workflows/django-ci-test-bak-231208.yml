@@ -1,0 +1,67 @@
+name: Django CI Test
+
+on:
+  push:
+    branches: ["action-deploy"]
+
+env:
+  AWS_REGION: ap-northeast-2                   # set this to your preferred AWS region, e.g. us-west-1
+  ECR_APP_REPOSITORY: stock-data-analyze-batch           # set this to your Amazon ECR repository name
+  # ECS_SERVICE: MY_ECS_SERVICE                 # set this to your Amazon ECS service name
+  # ECS_CLUSTER: MY_ECS_CLUSTER                 # set this to your Amazon ECS cluster name
+  # ECS_TASK_DEFINITION: MY_ECS_TASK_DEFINITION # set this to the path to your Amazon ECS task definition
+                                               # file, e.g. .aws/task-definition.json
+  CONTAINER_NAME: MY_CONTAINER_NAME           # set this to the name of the container in the
+                                               # containerDefinitions section of your task definition
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Build a docker container and
+        # push it to ECR so that it can
+        # be deployed to ECS.
+        docker build -f App.dockerfile -t $ECR_REGISTRY/$ECR_APP_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_APP_REPOSITORY:latest .
+        docker push $ECR_REGISTRY/$ECR_APP_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_APP_REPOSITORY:latest
+        echo "image=$ECR_REGISTRY/$ECR_APP_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: SSH login & deployment script execute
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.AWS_EC2_DNS }}
+        username: ${{ secrets.AWS_EC2_USER }}
+        key: ${{ secrets.AWS_EC2_KEY }}
+        port: 22
+        # rhel8
+        script: |
+          export AWS_ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws ecr get-login-password --region ap-northeast-2 | sudo docker login --username AWS --password-stdin ${AWS_ECR_REGISTRY}
+          sh deploy-ecr-stock-app.sh
+
