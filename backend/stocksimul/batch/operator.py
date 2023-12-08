@@ -9,7 +9,7 @@ import traceback
 import datetime
 from ..config.stockConfig import BATCH_HOUR, BATCH_MIN, BATCH_SEC, BATCH_TEST, \
     ETC_BATCH_HOUR, ETC_BATCH_MIN, ETC_BATCH_SEC, \
-    FUND_BATCH_HOUR, FUND_BATCH_MIN, FUND_BATCH_SEC
+    INDIC_BATCH_HOUR, INDIC_BATCH_MIN, INDIC_BATCH_SEC
 import logging
 from .stock_batch_manager import StockBatchManager
 from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR

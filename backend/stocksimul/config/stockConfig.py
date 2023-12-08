@@ -17,17 +17,17 @@ TEST_START_DATE = '20180701'  # 기준날짜
 # open dart api key
 OPEN_DART_API_KEY = 'c7b16eb1d1497ef4219a393248a46fb44b61da6e'
 # 종목 업데이트 배치 실행 시간
-BATCH_HOUR = 19
+BATCH_HOUR = 16
 BATCH_MIN = 00
 BATCH_SEC = 00
 
-ETC_BATCH_HOUR = 21
-ETC_BATCH_MIN = 00
+ETC_BATCH_HOUR = 16
+ETC_BATCH_MIN = 1
 ETC_BATCH_SEC = 00
 
-FUND_BATCH_HOUR = 22
-FUND_BATCH_MIN = 00
-FUND_BATCH_SEC = 00
+INDIC_BATCH_HOUR = 16
+INDIC_BATCH_MIN = 2
+INDIC_BATCH_SEC = 00
 
 # 운영
 # BATCH_TEST = False  # 배치 테스트 여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
@@ -39,7 +39,7 @@ FUND_BATCH_SEC = 00
 # FUND_API_REQUEST_TERM = 0.5
 
 # 개발
-BATCH_TEST = True  # 배치 테스트 여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
+BATCH_TEST = False  # 배치 테스트 여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
 SKIP_MANAGE_EVENT_INIT = False  # 추가할 종목이 있더라도 현재 DB에 등록된 종목만 사용하도록 INSERT 스킵여부 설부
 BATCH_TEST_CODE_YN = False  # 테스트시 특정 코드만 진행 여부
 BATCH_TEST_CODE_LIST = ['001260']  # 특정 종목 테스트 시 종목코드 지정
