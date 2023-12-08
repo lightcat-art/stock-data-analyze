@@ -84,7 +84,7 @@ class operator:
             else:
                 indic_daily_batch_time = datetime.datetime.combine(
                     datetime.date(today_org.year, today_org.month, today_org.day),
-                    datetime.time(ETC_BATCH_HOUR, ETC_BATCH_MIN, ETC_BATCH_SEC))
+                    datetime.time(INDIC_BATCH_HOUR, INDIC_BATCH_MIN, INDIC_BATCH_SEC))
 
             self.scheduler.add_job(manage_financial_indicator_daily, 'cron', hour=indic_daily_batch_time.hour,
                                    minute=indic_daily_batch_time.minute,
