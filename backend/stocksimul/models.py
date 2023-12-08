@@ -22,7 +22,7 @@ class EventInfo(models.Model):
     event_code = models.CharField(max_length=10)
     event_name = models.CharField(max_length=200)
     description = models.TextField(null=True)
-    mkt_nm = models.CharField(max_length=3, null=True)  # 11 : KOSPI / 12: KOSDAQ / 13 : KONEX
+    mkt_code = models.CharField(max_length=3, null=True)  # 11 : KOSPI / 12: KOSDAQ / 13 : KONEX
 
     # def __str__(self):
     #     return self.event_name
@@ -104,44 +104,88 @@ class InfoUpdateStatus(models.Model):
     objects = models.Manager()
 
 
-class FundamentalInfo(models.Model):
-    fm_info_id = models.AutoField(primary_key=True)
+class FinancialIndicator(models.Model):
+    fi_info_id = models.AutoField(primary_key=True)
     stock_event_id = models.IntegerField(null=True)
-    quarter = models.CharField(max_length=6, null=True)  # 분기명
-    stock_tot_co = models.BigIntegerField(null=True)  # 총 발행 주식수
-    stock_normal_co = models.BigIntegerField(null=True) # 보통주 발행 주식수
-    stock_prior_co = models.BigIntegerField(null=True) # 우선주 발행 주식수
-    cap = models.BigIntegerField(null=True)  # 시가총액
-    eps = models.IntegerField(null=True)  # 주당순이익
-    bps = models.IntegerField(blank=True, null=True)  # 주당순자산가치
+    date = models.DateField()
+    bps = models.FloatField(null=True)
     per = models.FloatField(null=True)
     pbr = models.FloatField(null=True)
-    roe = models.FloatField(null=True)
-    profit_loss = models.BigIntegerField(default=0)  # 당기순이익(손실)
-    profit_loss_control = models.BigIntegerField(default=0)  # 당기순이익(손실지배)
-    profit_loss_non_control = models.BigIntegerField(default=0)  # 당기순이익(손실비지배)
-    profit_loss_before_tax = models.BigIntegerField(default=0)  # 세전계속사업이익
-    assets = models.BigIntegerField(default=0)  # 자산총계
-    current_assets = models.BigIntegerField(default=0)  # 유동자산
-    non_current_assets = models.BigIntegerField(default=0)  # 비유동자산
-    liabilities = models.BigIntegerField(default=0)  # 부채총계
-    current_liabilities = models.BigIntegerField(default=0)  # 유동부채
-    non_current_liabilities = models.BigIntegerField(default=0)  # 비유동부채
-    equity = models.BigIntegerField(default=0)  # 자본총계
-    equity_control = models.BigIntegerField(default=0)  # 지배자본
-    equity_non_control = models.BigIntegerField(default=0)  # 비지배자본
-    revenue = models.BigIntegerField(default=0)  # 수익(매출액)
-    cost_of_sales = models.BigIntegerField(default=0)  # 매출원가 /영업비용(판관비 포함)
-    gross_profit = models.BigIntegerField(default=0)  # 매출총이익
-    operating_income_loss = models.BigIntegerField(default=0)  # 영업이익
-    investing_cash_flow = models.BigIntegerField(default=0)  # 투자활동현금흐름
-    operating_cash_flow = models.BigIntegerField(default=0)  # 영업활동현금흐름
-    financing_cash_flow = models.BigIntegerField(default=0)  # 재무활동현금흐름
+    eps = models.IntegerField(null=True)
+    div = models.FloatField(null=True)
+    dps = models.IntegerField(null=True)
 
     objects = models.Manager()
 
     class Meta:
         indexes = [
-            models.Index(fields=['stock_event_id'], name='idx_fundinfo_1'),
-            models.Index(fields=['stock_event_id', 'quarter'], name='idx_fundinfo_2'),
+            models.Index(fields=['stock_event_id'], name='idx_fin_indic_1'),
+            models.Index(fields=['stock_event_id', 'date'], name='idx_fin_indic_2'),
         ]
+
+
+# class StockShares(models.Model):
+#     shares_info_id = models.AutoField(primary_key=True)
+#     stock_event_id = models.IntegerField(null=True)
+#     quarter = models.CharField(max_length=6, null=True)  # 분기명
+#     stock_tot_co = models.BigIntegerField(null=True)  # 총 발행 주식수
+#     stock_normal_co = models.BigIntegerField(null=True)  # 보통주 발행 주식수
+#     stock_prior_co = models.BigIntegerField(null=True)  # 우선주 발행 주식수
+#     distb_stock_tot_co = models.BigIntegerField(null=True)  # 총 유통 주식수
+#     distb_stock_normal_co = models.BigIntegerField(null=True)  # 보통주 유통 주식수
+#     distb_stock_prior_co = models.BigIntegerField(null=True)  # 우선주 유통 주식수
+#     tes_stock_tot_co = models.BigIntegerField(null=True)  # 총 자기 주식수
+#     tes_stock_normal_co = models.BigIntegerField(null=True)  # 보통주 자기 주식수
+#     tes_stock_prior_co = models.BigIntegerField(null=True)  # 우선주 자기 주식수
+#
+#     objects = models.Manager()
+#
+#     class Meta:
+#         indexes = [
+#             models.Index(fields=['stock_event_id'], name='idx_shares_1'),
+#             models.Index(fields=['stock_event_id', 'quarter'], name='idx_shares_2'),
+#         ]
+#
+#
+# class FinancialStatement(models.Model):
+#     fs_info_id = models.AutoField(primary_key=True)
+#     stock_event_id = models.IntegerField(null=True)
+#     quarter = models.CharField(max_length=6, null=True)  # 분기명
+#     eps = models.IntegerField(null=True)  # 주당순이익
+#     profit_loss = models.BigIntegerField(default=0)  # 당기순이익(손실)
+#     profit_loss_control = models.BigIntegerField(default=0)  # 당기순이익(손실지배)
+#     profit_loss_non_control = models.BigIntegerField(default=0)  # 당기순이익(손실비지배)
+#     profit_loss_before_tax = models.BigIntegerField(default=0)  # 세전계속사업이익
+#     assets = models.BigIntegerField(default=0)  # 자산총계
+#     current_assets = models.BigIntegerField(default=0)  # 유동자산
+#     non_current_assets = models.BigIntegerField(default=0)  # 비유동자산
+#     liabilities = models.BigIntegerField(default=0)  # 부채총계
+#     current_liabilities = models.BigIntegerField(default=0)  # 유동부채
+#     non_current_liabilities = models.BigIntegerField(default=0)  # 비유동부채
+#     equity = models.BigIntegerField(default=0)  # 자본총계
+#     equity_control = models.BigIntegerField(default=0)  # 지배자본
+#     equity_non_control = models.BigIntegerField(default=0)  # 비지배자본
+#     revenue = models.BigIntegerField(default=0)  # 수익(매출액)
+#     cost_of_sales = models.BigIntegerField(default=0)  # 매출원가 /영업비용(판관비 포함)
+#     gross_profit = models.BigIntegerField(default=0)  # 매출총이익
+#     operating_income_loss = models.BigIntegerField(default=0)  # 영업이익
+#     investing_cash_flow = models.BigIntegerField(default=0)  # 투자활동현금흐름
+#     operating_cash_flow = models.BigIntegerField(default=0)  # 영업활동현금흐름
+#     financing_cash_flow = models.BigIntegerField(default=0)  # 재무활동현금흐름
+#
+#     objects = models.Manager()
+#
+#     class Meta:
+#         indexes = [
+#             models.Index(fields=['stock_event_id'], name='idx_fundinfo_1'),
+#             models.Index(fields=['stock_event_id', 'quarter'], name='idx_fundinfo_2'),
+#         ]
+#
+#
+# class FinancialStatementSkip(models.Model):
+#     fss_info_id = models.AutoField(primary_key=True)
+#     stock_event_id = models.IntegerField(null=True)
+#     quarter = models.CharField(max_length=6, null=True)  # 분기명
+#     skip_yn = models.CharField(max_length=1, null=True)  # 스킵여부
+#
+#     objects = models.Manager()

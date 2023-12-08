@@ -19,6 +19,10 @@ from . import dart_share
 from . import dart_event
 from . import dart_regstate
 from . import dart_utils
+import logging
+
+logger = logging.getLogger('dart')
+
 
 class OpenDartReader():
     # init corp_codes (회사 고유번호 데이터)
@@ -41,8 +45,8 @@ class OpenDartReader():
 
         self.corp_codes = pd.read_pickle(fn_cache)
         self.api_key = api_key
-        
-        
+
+
     # 1. 공시정보
     # 1-1. 공시정보 - 공시검색
     def list(self, corp=None, start=None, end=None, kind='', kind_detail='', final=True):
@@ -72,7 +76,7 @@ class OpenDartReader():
         df = self.corp_codes[self.corp_codes['corp_name'].str.contains(name)]
         corp_code_list = list(df['corp_code'])
         return dart_list.company_by_name(self.api_key, corp_code_list)
-    
+
     # 1-3. 공시정보 - 공시서류원본문서 (사업보고서)
     def document(self, rcp_no, cache=True):
         return dart_list.document(self.api_key, rcp_no, cache=cache)
@@ -117,18 +121,18 @@ class OpenDartReader():
     def finstate_all(self, corp, bsns_year, reprt_code='11011', fs_div='CFS'):
         reprt_code_dict = {'11013':'1분기보고서', '11012':'반기보고서', '11014':'3분기보고서', '11011':'사업보고서'}
         fs_div_dict = {'CFS':'연결제무제표', 'OFS':'별도(개별)제무제표'}
-        
+
         if reprt_code not in reprt_code_dict:
             raise ValueError(f'invalid reprt_code (use one of {reprt_code_dict}')
         if fs_div not in fs_div_dict:
             raise ValueError(f'invalid fs_div (use one of {fs_div_dict}')
-        
+
         corp_code = self.find_corp_code(corp)
         if not corp_code:
             raise ValueError(f'could not find "{corp}"')
-        print(f"reprt_code='{reprt_code}', fs_div='{fs_div}' ({reprt_code_dict[reprt_code]}, {fs_div_dict[fs_div]})'")
+        logger.debug(f"reprt_code='{reprt_code}', fs_div='{fs_div}' ({reprt_code_dict[reprt_code]}, {fs_div_dict[fs_div]})'")
         return dart_finstate.finstate_all(self.api_key, corp_code, bsns_year, reprt_code=reprt_code, fs_div=fs_div)
-        
+
     # 3-5. XBRL 표준계정과목체계(계정과목)
     def xbrl_taxonomy(self, sj_div):
         return dart_finstate.xbrl_taxonomy(self.api_key, sj_div=sj_div)
@@ -166,11 +170,11 @@ class OpenDartReader():
     # utils: list_date 특정 날짜의 공시보고서 전체 (deprecated)
     def list_date(self, date=None, final=True, cache=True):
         warnings.warn('list_date() is deprecated. use list_date_ex()')
-        
+
     # utils: list_date_ex 특정 날짜의 공시보고서 전체 데이터프레임 (시간포함)
     def list_date_ex(self, date=None, cache=True):
         return dart_utils.list_date_ex(date, cache=cache)
-    
+
     # utils: attach document list: 첨부문서의 목록정보(제목, URL)을 데이터프레임
     def attach_docs(self, s, match=None):
         return dart_utils.attach_docs(s, match=match)
@@ -183,7 +187,7 @@ class OpenDartReader():
     # utils: subdocument list: 하위 문서 목록정보(제목, URL)을 데이터프레임
     def sub_docs(self, s, match=None):
         return dart_utils.sub_docs(s, match=match)
-    
+
     # utils: attach files file list: 첨부파일 목록정보를 데이터프레임
     def attach_files(self, s):
         return dart_utils.attach_files(s)

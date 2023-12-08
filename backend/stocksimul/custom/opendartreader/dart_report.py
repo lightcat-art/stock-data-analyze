@@ -4,6 +4,9 @@
 import requests
 import json
 import pandas as pd
+import logging
+
+logger = logging.getLogger('dart_report')
 
 def report(api_key, corp_code, key_word, bsns_year, reprt_code='11011'):
     key_word_map = {
@@ -51,6 +54,6 @@ def report(api_key, corp_code, key_word, bsns_year, reprt_code='11011'):
     jo = r.json()
     
     if jo['status'] != '000' or 'list' not in jo:
-        print(jo)
-        return pd.DataFrame()
+        logger.error('reprt_code={}. response={}'.format(reprt_code, jo))
+        return None
     return pd.DataFrame(jo['list'])

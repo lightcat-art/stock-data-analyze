@@ -30,7 +30,8 @@ class DartFinstateConfig:
     revenue_id_list = ['ifrs-full_Revenue', 'ifrs_Revenue']  # 수익(매출액)
     revenue_nm_list = ['영업수익', '매출액', 'I.매출액']
 
-    cost_of_sales_id_list = ['ifrs-full_CostOfSales', 'ifrs_CostOfSales', 'dart_OperatingExpenses']  # 매출원가 / 영업비용(판관비포함)
+    cost_of_sales_id_list = ['ifrs-full_CostOfSales', 'ifrs_CostOfSales',
+                             'dart_OperatingExpenses']  # 매출원가 / 영업비용(판관비포함)
     cost_of_sales_nm_list = ['영업비용', '매출원가', 'II.매출원가']
 
     gross_profit_id_list = ['ifrs-full_GrossProfit', 'ifrs_GrossProfit']  # 매출총이익
@@ -311,28 +312,39 @@ class DartFinstateConfig:
         return financing_cash_flow_id_condition & (df[self.column_table_type] == self.table_type_cf)
 
 
-class DartStockTotQyStatusConfig:
+class DartStockSharesConfig:
+    column_stock_sort = 'se'  # 구분(증권의 종류, 합계, 비고)
+    column_pub_stock = 'istc_totqy'  # 발행주식
+    column_own_stock = 'tesstk_co'  # 자기주식
+    column_dist_stock = 'distb_stock_co'  # 유통주식
 
-    column_amount = 'thstrm_amount'  # 금액 컬럼명
-    column_standard_code = 'account_id'  # 표준계정코드 컬럼명
-    column_account_nm = 'account_nm'  # 재무항목명
+    stock_type_normal = ['보통주']
+    stock_type_prior = ['우선주']
+    stock_type_tot = ['합계']
 
-    column_table_type = 'sj_div'  # 표 종류 컬럼명
-    table_type_bs = 'BS'  # 재무상태표
-    table_type_is = 'IS'  # 손익계산서
-    table_type_cis = 'CIS'  # 포괄손익계산서
-    table_type_cf = 'CF'  # 현금흐름표
-
-    assets_id_list = ['ifrs-full_Assets', 'ifrs_Assets']  # 자산총계
-    assets_nm_list = ['자산총계']
-
-    def assets_condition(self, df):
-        assets_id_condition = None
-        for i, item in enumerate(self.assets_id_list):
-            if assets_id_condition is not None:
-                assets_id_condition = assets_id_condition | (df[self.column_standard_code] == item)
+    def normal_condition(self, df):
+        normal_id_cond = None
+        for i, item in enumerate(self.stock_type_normal):
+            if normal_id_cond is not None:
+                normal_id_cond = normal_id_cond | (df[self.column_stock_sort] == item)
             else:
-                assets_id_condition = df[self.column_standard_code] == item
-        for i, item in enumerate(self.assets_nm_list):
-            assets_id_condition = assets_id_condition | (df[self.column_account_nm] == item)
-        return assets_id_condition & (df[self.column_table_type] == self.table_type_bs)
+                normal_id_cond = df[self.column_stock_sort] == item
+        return normal_id_cond
+
+    def prior_condition(self, df):
+        prior_id_cond = None
+        for i, item in enumerate(self.stock_type_normal):
+            if prior_id_cond is not None:
+                prior_id_cond = prior_id_cond | (df[self.column_stock_sort] == item)
+            else:
+                prior_id_cond = df[self.column_stock_sort] == item
+        return prior_id_cond
+
+    def tot_condition(self, df):
+        tot_id_cond = None
+        for i, item in enumerate(self.stock_type_normal):
+            if tot_id_cond is not None:
+                tot_id_cond = tot_id_cond | (df[self.column_stock_sort] == item)
+            else:
+                tot_id_cond = df[self.column_stock_sort] == item
+        return tot_id_cond

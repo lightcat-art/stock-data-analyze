@@ -166,7 +166,7 @@ LOGGING = {
             # 로그 파일이 너무 커져서 디스크가 꽉 차는 위험을 방지할 수 있다.
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': BASE_DIR / 'logs/app.log',
-            'maxBytes': 1024*1024*100, # 100MB,
+            'maxBytes': 1024 * 1024 * 100,  # 100MB,
             'backupCount': 5,
             'formatter': 'standard',
         },

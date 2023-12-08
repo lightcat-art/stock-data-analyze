@@ -3,7 +3,7 @@ from pykrx import stock
 import datetime
 import OpenDartReader
 from backend.stocksimul.custom.opendartreader.dart_manager import DartManager
-from backend.stocksimul.custom.opendartreader.dart_config import DartFinstateConfig
+from backend.stocksimul.custom.opendartreader.dart_config import DartFinstateConfig, DartStockSharesConfig
 from backend.stocksimul.custom import pykrx as stock_custom
 import logging
 import xml.etree.ElementTree as ET
@@ -45,19 +45,6 @@ def test_dict():
     if '005930' in dictionary:
         print('ok')
         print(dictionary['005930'])
-
-
-def dart_report():
-    dart = OpenDartReader('69500f38022cc6f7d33956e4690d43499fa10423')
-    report = dart.report('005930', '배당', 2023, reprt_code='11013')
-
-    print(report)
-
-
-def dart_finstate():
-    dart = OpenDartReader('69500f38022cc6f7d33956e4690d43499fa10423')
-    finstate = dart.finstate('삼성전자', 2023, reprt_code='11013')
-    print(finstate)
 
 
 def calcQuarterCodeFromNumber(quarter: int = None):
@@ -159,17 +146,60 @@ def dart_finstate_all(event_name: str = None, year: int = None, qt: str = None):
                                               ))
 
 
-def get_stock_tot_qy_state(event_name: str = None, year: int = None, qt: str = None):
+def dart_finstate(event_name: str = None, year: int = None, qt: str = None):
     reprt_code = calcQuarterCodeFromNumber(qt)
-    stocktotco_state = None
+    finstate = None
     try:
-        stocktotco_state = DartManager.instance().get_dart().report(event_name,
-                                                                    '주식총수',
-                                                                    year, reprt_code)
+        finstate = DartManager.instance().get_dart().finstate(event_name, year, reprt_code=reprt_code)
     except Exception as e:
         logger.exception('get finstate request over-limited')
-    if stocktotco_state is not None:
-        print(stocktotco_state)
+    print(finstate)
+    if finstate is not None:
+        pass
+
+
+def get_stock_tot_qy_state(event_name: str = None, year: int = None, qt: str = None):
+    reprt_code = calcQuarterCodeFromNumber(qt)
+    shares = None
+    try:
+        shares = DartManager.instance().get_dart().report(event_name,
+                                                          '주식총수',
+                                                          year, reprt_code)
+    except Exception as e:
+        logger.exception('get finstate request over-limited')
+    if shares is not None:
+        try:
+            stock_tot_co = 0  # 총 발행 주식수
+            stock_normal_co = 0  # 보통주 발행 주식수
+            stock_prior_co = 0  # 우선주 발행 주식수
+            distb_stock_tot_co = 0  # 총 유통 주식수
+            distb_stock_normal_co = 0  # 보통주 유통 주식수
+            distb_stock_prior_co = 0  # 우선주 유통 주식수
+            tes_stock_tot_co = 0  # 총 자기 주식수
+            tes_stock_normal_co = 0  # 보통주 자기 주식수
+            tes_stock_prior_co = 0  # 우선주 자기 주식수
+
+            stock_tot_co_str = shares.loc[DartStockSharesConfig().tot_condition(shares)].iloc[0][
+                DartStockSharesConfig().column_pub_stock]
+            stock_normal_co = shares.loc[DartStockSharesConfig().normal_condition(shares)].iloc[0][
+                DartStockSharesConfig().column_pub_stock]
+            stock_prior_co = shares.loc[DartStockSharesConfig().prior_condition(shares)].iloc[0][
+                DartStockSharesConfig().column_pub_stock]
+            distb_stock_tot_co = shares.loc[DartStockSharesConfig().tot_condition(shares)].iloc[0][
+                DartStockSharesConfig().column_dist_stock]
+            distb_stock_normal_co = shares.loc[DartStockSharesConfig().normal_condition(shares)].iloc[0][
+                DartStockSharesConfig().column_dist_stock]
+            distb_stock_prior_co = shares.loc[DartStockSharesConfig().prior_condition(shares)].iloc[0][
+                DartStockSharesConfig().column_dist_stock]
+            tes_stock_tot_co = shares.loc[DartStockSharesConfig().tot_condition(shares)].iloc[0][
+                DartStockSharesConfig().column_own_stock]
+            tes_stock_normal_co = shares.loc[DartStockSharesConfig().normal_condition(shares)].iloc[0][
+                DartStockSharesConfig().column_own_stock]
+            tes_stock_prior_co = shares.loc[DartStockSharesConfig().prior_condition(shares)].iloc[0][
+                DartStockSharesConfig().column_own_stock]
+        except Exception as e:
+            logger.exception('error occured')
+            pass
 
 
 def get_market_sector_classifications_test(date: str, market: str):
@@ -181,14 +211,10 @@ def get_market_price_change_by_ticker_test():
 
 
 def test_custom_krx_api_by_ticker():
-    df = stock_custom.get_market_ohlcv_by_ticker(date='231203', market="ALL")
+    df = stock_custom.get_market_ohlcv_by_ticker(date='20231205', market="ALL")
     for k, v in df.to_dict('index').items():
-        if k == '035760':
+        if k == '005930':
             print(v)
-        # if v['시장'] != 'KOSPI' and v['시장'] != 'KOSDAQ' and v['시장'] != 'KONEX':
-        #     print(v['시장'])
-        if v['시장'] == 'KONEX':
-            print('k={}, v={}'.format(k, v))
 
         # print('key = {}'.format(k))
         # print('value = {}, valueType = {}'.format(v, type(v)))
@@ -244,12 +270,45 @@ def raiseExceptionTest():
     return result
 
 
+def dartCorplist(corp_name):
+    corp_code = DartManager.instance().get_dart().corp_codes
+    print(type(corp_code))
+    print(corp_code)
+    # corp_code.set_index('corp_name')
+    for k, v in corp_code.to_dict('index').items():
+        if corp_name in v['corp_name']:
+            print(v)
+
+
+def digitTest(corp):  # type 자체가 int로들어가야하는것이 아닌 string에서 숫자만 들어가는지 아닌지 인식하는 메소드
+    if corp.isdigit():
+        print('digit')
+    else:
+        print('not digit')
+
+
+def dicKeyTest():
+    dic = {'status': 100, 'code': 124}
+    if 'status' in dic:
+        print('ok')
+
+
+def mainIndicatorTest():
+    indic_info_df = stock.get_market_fundamental_by_ticker(date='20231205', market='ALL')
+    print(indic_info_df)
+
 if __name__ == "__main__":
     # get_market_sector_classifications_test("20231201", "KOSPI")
-    # test_custom_krx_api_by_ticker()
+    test_custom_krx_api_by_ticker()
     # flagComparison(2**11)
-    # get_stock_tot_qy_state('삼성전자', 2022, '1')
-    print(raiseExceptionTest())
+    # get_stock_tot_qy_state('삼성전자우', 2022, '1')
+    # print(raiseExceptionTest())
+    # dart_finstate('F&F홀딩스',2022,'3')
+    # dartCorplist('BNK')
+    # digitTest()
+    # dart_finstate_all('138930', 2022, '1')  # 매출 총이익 누락 - 영업비용에 판관비 포함 (완료)'
+    # dicKeyTest()
+    # mainIndicatorTest()
     """
     # assets 관련
     # dart_finstate_all('KG모빌리티', 2021, '1')
