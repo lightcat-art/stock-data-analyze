@@ -9,12 +9,22 @@ from django.shortcuts import render, get_object_or_404, redirect
 from plotly.subplots import make_subplots
 from pykrx.website.krx.market import wrap
 import plotly.graph_objects as go
+from rest_framework.decorators import api_view
 
 from .config import stockConfig
 from .forms import StockSimulParamForm
 from .models import PriceInfo, InfoUpdateStatus, EventInfo, SimulParam
+# views.py
+from django.shortcuts import render
+from rest_framework.response import Response
 
 stock_price_init_start_dt = '2000-01-01'
+
+
+@api_view(['GET'])
+def HealthCheckAPI(request):
+
+    return Response('OK')
 
 
 def stock_simul_param(request):
@@ -75,7 +85,9 @@ def render_stock_simul_result(request, event_name, start_date_str, end_date_str)
     # start_date_str = request.POST.get('start_date_str')
     # end_date_str = request.POST.get('end_date_str')
     # print('render_stock_simul_result : ajax param event_name = {}, start_date = {}, end_date = {}'.format(event_name, start_date_str, end_date_str))
-    print('render_stock_simul_result : url param event_name = {}, start_date = {}, end_date = {}'.format(event_name, start_date_str, end_date_str))
+    print('render_stock_simul_result : url param event_name = {}, start_date = {}, end_date = {}'.format(event_name,
+                                                                                                         start_date_str,
+                                                                                                         end_date_str))
     return render(request, 'stocksimul/stock_simul_result.html', {'event_name': event_name,
                                                                   'start_date_str': start_date_str,
                                                                   'end_date_str': end_date_str})

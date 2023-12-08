@@ -15,10 +15,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+import rest_framework
 
 urlpatterns = [
     # path('admin/', admin.site.urls),
     # ip:port로 들어오는 모든 접속 요청을 blog.urls로 전송하여 추가 명령 검색
     # path('', include('blog.urls')),
-    # path('', include('stocksimul.urls'))
+    path('stocksimul/', include('stocksimul.urls'))
 ]
