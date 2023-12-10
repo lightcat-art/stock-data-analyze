@@ -24,7 +24,7 @@ stock_price_init_start_dt = '2000-01-01'
 @api_view(['GET'])
 def HealthCheckAPI(request):
 
-    return Response('OK')
+    return Response('success')
 
 
 def stock_simul_param(request):
