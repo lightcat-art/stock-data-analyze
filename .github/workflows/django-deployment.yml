@@ -64,4 +64,3 @@ jobs:
           export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws ecr get-login-password --region ap-northeast-2 | sudo docker login --username AWS --password-stdin ${AWS_ECR_REGISTRY}
           sh deploy-ecr-stock-app.sh
-
