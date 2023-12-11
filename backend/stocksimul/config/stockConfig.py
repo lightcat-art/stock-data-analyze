@@ -40,6 +40,7 @@ INDIC_BATCH_SEC = 00
 
 # 개발
 BATCH_TEST = False  # 배치 테스트 여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
+ETC_BATCH_IMMEDIATE = True  # krx-api 배치 테스트 여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
 SKIP_MANAGE_EVENT_INIT = False  # 추가할 종목이 있더라도 현재 DB에 등록된 종목만 사용하도록 INSERT 스킵여부 설부
 BATCH_TEST_CODE_YN = False  # 테스트시 특정 코드만 진행 여부
 BATCH_TEST_CODE_LIST = ['001260']  # 특정 종목 테스트 시 종목코드 지정

@@ -187,9 +187,6 @@ def manage_event_daily():
                 price_info_df.rename(
                     columns={'시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
                              '저가': 'low', '거래대금': 'value', '등락률': 'up_down_rate',
-                             # '시장': 'mkt_nm', '등락여부': 'up_down_sort',
-                             # '등락폭': 'up_down_value', '시가총액': 'market_cap',
-                             # '상장주식수': 'listed_shares'
                              }, inplace=True)
 
                 price_info_df['date'] = datetime.datetime.now()
@@ -311,9 +308,6 @@ def manage_event_daily():
                             logger.info('{}{} : updating omitted informations complete'.format(logger_method, k))
 
                         if not holiday:
-                            # mkt_nm 은 eventinfo 테이블에 넣기 위한 정보이므로 priceinfo 테이블에 넣기전에 빼기.
-                            # event_mkt_nm = v['mkt_nm']
-                            # v.pop('mkt_nm')
                             if not new_event_yn:
                                 event_status = InfoUpdateStatus.objects.filter(
                                     stock_event_id=event_info.first().stock_event_id).filter(table_type='P')
@@ -352,8 +346,6 @@ def manage_event_daily():
                                 entry.save()
 
                             # 시장명 다르거나 없다면 업데이트
-                            # if event_info.first().mkt_nm is None or event_info.first().mkt_nm != event_mkt_nm:
-                            #     event_info.update(mkt_nm=event_mkt_nm)
 
                         event_status = InfoUpdateStatus.objects.filter(
                             stock_event_id=event_info.first().stock_event_id).filter(table_type='P')
@@ -606,7 +598,7 @@ def manage_event_daily_etc():
             not_adj_price_info.rename(
                 columns={'티커': 'event_code', '시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
                          '저가': 'low', '거래대금': 'value', '등락률': 'up_down_rate',
-                         '등락유형': 'up_down_sort', '등락폭': 'up_down_value', '시장': 'mkt_nm',
+                         '등락유형': 'up_down_sort', '등락폭': 'up_down_value', '시장': 'mkt_code',
                          '시가총액': 'market_cap', '상장주식수': 'listed_shares'}, inplace=True)
             not_adj_price_info['date'] = scan_date
 
@@ -629,15 +621,15 @@ def manage_event_daily_etc():
                     #     if before_not_adj_price_info.count() == 0:
                     #         continue
 
-                    # mkt_nm 은 eventinfo 테이블에 넣기 위한 정보이므로 priceinfo 테이블에 넣기전에 빼기.
-                    event_mkt_nm = None
-                    if v['mkt_nm'] == 'KOSPI':
-                        event_mkt_nm = '11'
-                    elif v['mkt_nm'] == 'KOSDAQ' or v['mkt_nm'] == 'KOSDAQGLOBAL':
-                        event_mkt_nm = '12'
-                    elif v['mkt_nm'] == 'KONEX':
-                        event_mkt_nm = '13'
-                    v.pop('mkt_nm')
+                    # mkt_code 은 eventinfo 테이블에 넣기 위한 정보이므로 priceinfo 테이블에 넣기전에 빼기.
+                    event_mkt_code = None
+                    if v['mkt_code'] == 'KOSPI':
+                        event_mkt_code = '11'
+                    elif v['mkt_code'] == 'KOSDAQ' or v['mkt_code'] == 'KOSDAQGLOBAL':
+                        event_mkt_code = '12'
+                    elif v['mkt_code'] == 'KONEX':
+                        event_mkt_code = '13'
+                    v.pop('mkt_code')
 
                     if v['open'] != 0 and v['high'] != 0 and v['low'] != 0 and v['close'] != 0:
                         # logger.info('{}금일 주가 INSERT : code={}'.format(logger_method, k))
@@ -646,8 +638,8 @@ def manage_event_daily_etc():
                         entry.save()
 
                     # 시장명 다르거나 없다면 업데이트
-                    if event_info.first().mkt_nm is None or event_info.first().mkt_nm != event_mkt_nm:
-                        event_info.update(mkt_nm=event_mkt_nm)
+                    if event_info.first().mkt_code is None or event_info.first().mkt_code != event_mkt_code:
+                        event_info.update(mkt_code=event_mkt_code)
 
                 event_status = InfoUpdateStatus.objects.filter(
                     stock_event_id=event_info.first().stock_event_id).filter(table_type='N')

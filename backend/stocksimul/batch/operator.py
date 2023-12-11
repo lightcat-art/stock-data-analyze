@@ -8,7 +8,7 @@ from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 import traceback
 import datetime
 from ..config.stockConfig import BATCH_HOUR, BATCH_MIN, BATCH_SEC, BATCH_TEST, \
-    ETC_BATCH_HOUR, ETC_BATCH_MIN, ETC_BATCH_SEC, \
+    ETC_BATCH_HOUR, ETC_BATCH_MIN, ETC_BATCH_SEC, ETC_BATCH_IMMEDIATE, \
     INDIC_BATCH_HOUR, INDIC_BATCH_MIN, INDIC_BATCH_SEC
 import logging
 from .stock_batch_manager import StockBatchManager
@@ -65,7 +65,7 @@ class operator:
             #                        id='manage_event_init_etc', replace_existing=True)
 
             etc_daily_batch_time = None
-            if BATCH_TEST:
+            if ETC_BATCH_IMMEDIATE:
                 etc_daily_batch_time = today_org + datetime.timedelta(seconds=40)
             else:
                 etc_daily_batch_time = datetime.datetime.combine(
