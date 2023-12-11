@@ -100,6 +100,10 @@ def krxMarketStatusCode(TYPE):
         '거래정지': '12',
         '전산오류': '99',
     }
+    if TYPE not in codeDict:
+        return None
+
+    return codeDict[TYPE]
 
 
 def apiCode(TYPE):

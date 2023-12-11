@@ -291,6 +291,7 @@ def manage_event_daily():
                             omit_price_info_df = stock.get_market_ohlcv_by_date(fromdate=fromdate,
                                                                                 todate=todate,
                                                                                 ticker=k)
+                            time.sleep(0.1)
                             if len(omit_price_info_df) != 0:  # 휴일에 의한 업데이트 시간차 발생 경우 제외
                                 omit_price_info_df = omit_price_info_df.replace({np.nan: None})
                                 omit_price_info_df = omit_price_info_df.reset_index()
@@ -359,7 +360,7 @@ def manage_event_daily():
                             # event_status.first().mod_dt = datetime.datetime.now()
                             # event_status.first().save()
                             event_status.update(mod_dt=datetime.datetime.now())
-                        time.sleep(0.1)
+
             else:
                 logger.info('{}manage_event_init executing, so skip daily batch'.format(logger_method))
 
@@ -440,8 +441,7 @@ def manage_financial_indicator_daily():
                         entry.stock_event_id = event_info.first().stock_event_id
                         entry.save()
 
-                    event_status = InfoUpdateStatus.objects.filter(
-                        stock_event_id=event_info.first().stock_event_id).filter(table_type='I')
+                    event_status = InfoUpdateStatus.objects.filter(table_type='I')
                     if len(event_status) == 0:
                         status_dict = {'table_type': 'I', 'mod_dt': scan_date, 'reg_dt': scan_date,
                                        'update_type': 'U'}
@@ -611,7 +611,7 @@ def manage_event_daily_etc():
 
                     event_info = EventInfo.objects.filter(event_code=k)
 
-                    if event_info.count() == 0:  # 가격정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 SKIP
+                    if event_info.count() == 0 or event_info.first() is None:  # 가격정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 SKIP
                         # logger.error('{}eventinfo에 등록되어 있지 않음. code = {}'.format(logger_method, k))
                         continue
                     # else:
@@ -637,6 +637,8 @@ def manage_event_daily_etc():
                         entry = NotAdjPriceInfo(**v)
                         entry.stock_event_id = event_info.first().stock_event_id
                         entry.save()
+                        print(event_info.first())
+                        print(event_info.first().mkt_status)
                         if event_info.first().mkt_status is None or event_info.first().mkt_status != krxMarketStatusCode(
                                 '정상'):
                             event_info.update(mkt_status=krxMarketStatusCode('정상'))
@@ -653,8 +655,7 @@ def manage_event_daily_etc():
                     if event_info.first().mkt_code is None or event_info.first().mkt_code != event_mkt_code:
                         event_info.update(mkt_code=event_mkt_code)
 
-                event_status = InfoUpdateStatus.objects.filter(
-                    stock_event_id=event_info.first().stock_event_id).filter(table_type='N')
+                event_status = InfoUpdateStatus.objects.filter(table_type='N')
                 if len(event_status) == 0:
                     status_dict = {'table_type': 'N', 'mod_dt': scan_date, 'reg_dt': scan_date,
                                    'update_type': 'U'}
