@@ -23,6 +23,7 @@ class EventInfo(models.Model):
     event_name = models.CharField(max_length=200)
     description = models.TextField(null=True)
     mkt_code = models.CharField(max_length=3, null=True)  # 11 : KOSPI / 12: KOSDAQ / 13 : KONEX
+    mkt_status = models.CharField(max_length=3, null=True) # 11 : 정상 / 12 : 거래정지 / 999 : KRX에 등록되지 않은 데이터
 
     # def __str__(self):
     #     return self.event_name

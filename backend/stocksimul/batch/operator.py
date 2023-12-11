@@ -9,7 +9,7 @@ import traceback
 import datetime
 from ..config.stockConfig import BATCH_HOUR, BATCH_MIN, BATCH_SEC, BATCH_TEST, \
     ETC_BATCH_HOUR, ETC_BATCH_MIN, ETC_BATCH_SEC, ETC_BATCH_IMMEDIATE, \
-    INDIC_BATCH_HOUR, INDIC_BATCH_MIN, INDIC_BATCH_SEC
+    INDIC_BATCH_HOUR, INDIC_BATCH_MIN, INDIC_BATCH_SEC, INDIC_BATCH_IMMEDIATE
 import logging
 from .stock_batch_manager import StockBatchManager
 from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
@@ -79,7 +79,7 @@ class operator:
                                    replace_existing=True)
 
             indic_daily_batch_time = None
-            if BATCH_TEST:
+            if INDIC_BATCH_IMMEDIATE:
                 indic_daily_batch_time = today_org + datetime.timedelta(seconds=40)
             else:
                 indic_daily_batch_time = datetime.datetime.combine(

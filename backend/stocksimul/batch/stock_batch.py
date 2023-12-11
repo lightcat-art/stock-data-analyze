@@ -14,6 +14,7 @@ from ..custom.opendartreader.dart_manager import DartManager
 from ..custom.opendartreader.dart_config import DartFinstateConfig, DartStockSharesConfig
 from ..custom import pykrx as stock_custom
 from .stock_batch_manager import StockBatchManager
+from ..config.classificationCode import krxMarketCode, krxMarketStatusCode
 
 '''
 1. api 통신을 통해 현재 마켓에 등록된 종목정보를 모두 받아온다.
@@ -576,7 +577,7 @@ def manage_event_daily_etc():
             '-mod_dt')[:1]
 
         scan_date = None
-        if event_status.count() != 0: # 최근날짜부터 INSERT 이므로 일배치 시작날짜 이전데이터를 가져올 경우는 없다.
+        if event_status.count() != 0:  # 최근날짜부터 INSERT 이므로 일배치 시작날짜 이전데이터를 가져올 경우는 없다.
             # # 안정성을 위해 해당날짜 이후 데이터 일괄 삭제 후 RE-INSERT
             # not_adj_delete_by_date = NotAdjPriceInfo.objects.filter(
             #     date__range=[event_status.first()[0] + datetime.timedelta(days=1), today_org])
@@ -624,11 +625,11 @@ def manage_event_daily_etc():
                     # mkt_code 은 eventinfo 테이블에 넣기 위한 정보이므로 priceinfo 테이블에 넣기전에 빼기.
                     event_mkt_code = None
                     if v['mkt_code'] == 'KOSPI':
-                        event_mkt_code = '11'
+                        event_mkt_code = krxMarketCode('KOSPI')
                     elif v['mkt_code'] == 'KOSDAQ' or v['mkt_code'] == 'KOSDAQGLOBAL':
-                        event_mkt_code = '12'
+                        event_mkt_code = krxMarketCode('KOSDAQ')
                     elif v['mkt_code'] == 'KONEX':
-                        event_mkt_code = '13'
+                        event_mkt_code = krxMarketCode('KONEX')
                     v.pop('mkt_code')
 
                     if v['open'] != 0 and v['high'] != 0 and v['low'] != 0 and v['close'] != 0:
@@ -636,6 +637,17 @@ def manage_event_daily_etc():
                         entry = NotAdjPriceInfo(**v)
                         entry.stock_event_id = event_info.first().stock_event_id
                         entry.save()
+                        if event_info.first().mkt_status is None or event_info.first().mkt_status != krxMarketStatusCode(
+                                '정상'):
+                            event_info.update(mkt_status=krxMarketStatusCode('정상'))
+                    elif v['open'] == 0 and v['high'] == 0 and v['low'] == 0 and v['close'] != 0:  # 거래정지 태그 업데이트
+                        if event_info.first().mkt_status is None or event_info.first().mkt_status != krxMarketStatusCode(
+                                '거래정지'):
+                            event_info.update(mkt_status=krxMarketStatusCode('거래정지'))
+                    else:
+                        if event_info.first().mkt_status is None or event_info.first().mkt_status != krxMarketStatusCode(
+                                '전산오류'):
+                            event_info.update(mkt_status=krxMarketStatusCode('전산오류'))
 
                     # 시장명 다르거나 없다면 업데이트
                     if event_info.first().mkt_code is None or event_info.first().mkt_code != event_mkt_code:
@@ -1338,14 +1350,14 @@ def isIncludeRecent3Qt(cur_qt: str, scan_qt: str):
         return False
 
 
-def validateQuarter(qt: str, stock_event_id: int):
-    qt_origin = datetime.datetime.strptime(qt, '%Y%m')
-    # 해당년도 1분기가 DB에 등록되어있는지 조회
-    qt_1 = datetime.date(qt_origin.year, 3, 1)
-    qt_1_str = qt_1.strftime('%Y%m')
-    recent_quarter = FinancialStatement.objects.filter(
-        stock_event_id=stock_event_id).filter(quarter__startswith=qt_1_str)
-    if recent_quarter.count() == 0:
-        return False
-    else:
-        return True
+# def validateQuarter(qt: str, stock_event_id: int):
+#     qt_origin = datetime.datetime.strptime(qt, '%Y%m')
+#     # 해당년도 1분기가 DB에 등록되어있는지 조회
+#     qt_1 = datetime.date(qt_origin.year, 3, 1)
+#     qt_1_str = qt_1.strftime('%Y%m')
+#     recent_quarter = FinancialStatement.objects.filter(
+#         stock_event_id=stock_event_id).filter(quarter__startswith=qt_1_str)
+#     if recent_quarter.count() == 0:
+#         return False
+#     else:
+#         return True

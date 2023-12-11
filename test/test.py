@@ -211,9 +211,11 @@ def get_market_price_change_by_ticker_test():
 
 
 def test_custom_krx_api_by_ticker():
-    df = stock_custom.get_market_ohlcv_by_ticker(date='20231205', market="ALL")
+    df = stock_custom.get_market_ohlcv_by_ticker(date='20231211', market="ALL")
     for k, v in df.to_dict('index').items():
         if k == '005930':
+            print(v)
+        elif k == '404950':
             print(v)
 
         # print('key = {}'.format(k))
@@ -297,9 +299,11 @@ def mainIndicatorTest():
     indic_info_df = stock.get_market_fundamental_by_ticker(date='20231205', market='ALL')
     print(indic_info_df)
 
+
 if __name__ == "__main__":
     # get_market_sector_classifications_test("20231201", "KOSPI")
     test_custom_krx_api_by_ticker()
+
     # flagComparison(2**11)
     # get_stock_tot_qy_state('삼성전자우', 2022, '1')
     # print(raiseExceptionTest())

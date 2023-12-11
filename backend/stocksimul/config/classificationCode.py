@@ -82,15 +82,24 @@ def screenNum(TYPE):
     return screenDict[TYPE]
 
 
-def fieldCode(TYPE):
+def krxMarketCode(TYPE):
     fieldDict = {
-        "KOSPI": "001",
-        "KOSDAQ": "100"
+        'KOSPI': '11',
+        'KOSDAQ': '12',
+        'KONEX': '13',
     }
     if TYPE not in fieldDict:
         return None
 
     return fieldDict[TYPE]
+
+
+def krxMarketStatusCode(TYPE):
+    codeDict = {
+        '정상': '11',
+        '거래정지': '12',
+        '전산오류': '99',
+    }
 
 
 def apiCode(TYPE):
