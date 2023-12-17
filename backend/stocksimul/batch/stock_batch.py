@@ -1,4 +1,5 @@
-from ..models import PriceInfo, InfoUpdateStatus, EventInfo, NotAdjPriceInfo, FinancialIndicator
+from ..models import PriceInfo, InfoUpdateStatus, EventInfo, NotAdjPriceInfo, FinancialIndicator, ForeignHoldingVol, \
+    IndexBasicInfo, IndexContainMapInfo, IndexPriceInfo
 from pykrx.website import krx
 from pykrx import stock
 import datetime
@@ -9,12 +10,13 @@ import numpy as np
 from numpy.lib import math
 import logging
 from ..config.stockConfig import BATCH_TEST_CODE_YN, BATCH_TEST_CODE_LIST, SKIP_MANAGE_EVENT_INIT, \
-    FIRST_BATCH_TODATE, FUND_API_REQUEST_TERM, FUND_SKIP_CO, FUND_SKIP_FINSTATE
+    FIRST_BATCH_TODATE, FUND_API_REQUEST_TERM, FUND_SKIP_CO, FUND_SKIP_FINSTATE, SKIP_MANAGE_INDEX_BASIC
 from ..custom.opendartreader.dart_manager import DartManager
 from ..custom.opendartreader.dart_config import DartFinstateConfig, DartStockSharesConfig
 from ..custom import pykrx as stock_custom
 from .stock_batch_manager import StockBatchManager
-from ..config.classificationCode import krxMarketCode, krxMarketStatusCode
+from ..config.classificationCode import krxMarketCode, krxMarketStatusCode, dbTableType, dbUpdateType, \
+    krxIndexMarketCode
 
 '''
 1. api 통신을 통해 현재 마켓에 등록된 종목정보를 모두 받아온다.
@@ -96,7 +98,7 @@ def manage_event_init():
                 event_info = EventInfo.objects.filter(event_code=event_code)
                 if event_info.count() != 0:
                     event_status = InfoUpdateStatus.objects.filter(stock_event_id=event_info.first().stock_event_id) \
-                        .filter(table_type='P')
+                        .filter(table_type=dbTableType('종목수정종가'))
                     if event_status.count() != 0:  # 이미 등록된 것이면 스킵.
                         logger.info('{}{} already inserted. skip inserting.'.format(logger_method, item['event_code']))
                         continue
@@ -144,7 +146,8 @@ def manage_event_init():
                 end_insert_market_data = datetime.datetime.now().timestamp()
                 insert_market_data_time_taken += (end_insert_market_data - end_get_market_data)
 
-                status_dict = {'table_type': 'P', 'mod_dt': todate_org, 'reg_dt': todate_org, 'update_type': 'U',
+                status_dict = {'table_type': dbTableType('종목수정종가'), 'mod_dt': todate_org, 'reg_dt': todate_org,
+                               'update_type': 'U',
                                'stock_event_id': event_info.first().stock_event_id}
                 event_status_insert = InfoUpdateStatus(**status_dict)
                 event_status_insert.save()
@@ -195,29 +198,26 @@ def manage_event_daily():
                 # if not holiday:
                 new_event_result = {}
                 del_event_result = []
-                # delete 항목을 따로 나중에 제외시키기 위해 현재 등록되어있는 종목 미리 모두 다 넣어둠.
-                if len(market_event_info) != 0:
-                    for cur_event in cur_event_info:
-                        del_event_result.append(cur_event.event_code)
-                # 등록되어있는 종목, 신규종목, 삭제될 종목 구분.
-                for market_event_code, market_event_name in market_event_info.iteritems():
-                    code_exist = False
-                    code_new = False
-                    code_delete = False
-                    for cur_event in cur_event_info:
-                        if cur_event.event_code == market_event_code:
-                            code_exist = True
-                            # event_result['exist'].append(item['event_code'])
-                            # DB 에서 존재하는 종목 중 시장에서 존재하는 종목 말고는 모두 제거되어야 하는 종목임.
-                            del_event_result.remove(market_event_code)
+                if not SKIP_MANAGE_EVENT_INIT:  # 현재 DB에 등록된 종목을 기준으로 업데이트 테스트하기 위해 삭제/신규종목 초기화
+                    # delete 항목을 따로 나중에 제외시키기 위해 현재 등록되어있는 종목 미리 모두 다 넣어둠.
+                    if len(market_event_info) != 0:
+                        for cur_event in cur_event_info:
+                            del_event_result.append(cur_event.event_code)
+                    # 등록되어있는 종목, 신규종목, 삭제될 종목 구분.
+                    for market_event_code, market_event_name in market_event_info.iteritems():
+                        code_exist = False
+                        code_new = False
+                        code_delete = False
+                        for cur_event in cur_event_info:
+                            if cur_event.event_code == market_event_code:
+                                code_exist = True
+                                # event_result['exist'].append(item['event_code'])
+                                # DB 에서 존재하는 종목 중 시장에서 존재하는 종목 말고는 모두 제거되어야 하는 종목임.
+                                del_event_result.remove(market_event_code)
 
-                    if not code_exist:
-                        code_new = True
-                        new_event_result.update({market_event_code: market_event_name})
-
-                if SKIP_MANAGE_EVENT_INIT:  # 현재 DB에 등록된 종목을 기준으로 업데이트 테스트하기 위해 삭제/신규종목 초기화
-                    new_event_result = {}
-                    del_event_result = []
+                        if not code_exist:
+                            code_new = True
+                            new_event_result.update({market_event_code: market_event_name})
 
                 for delete_event_code in del_event_result:
                     with transaction.atomic():
@@ -236,7 +236,7 @@ def manage_event_daily():
 
                             # 관리상태정보 삭제
                             del_event_status = InfoUpdateStatus.objects.filter(stock_event_id=del_event_id) \
-                                .filter(table_type='P')
+                                .filter(table_type=dbTableType('종목수정종가'))
                             del_event_status.delete()
 
                 # stockevent 테이블 업데이트 - 신규 종목
@@ -277,7 +277,8 @@ def manage_event_daily():
                             before_insert_yn = True
                         else:  # 기존종목이면 updateStatus를 확인하여 누락된 경우를 체크 후 INSERT 및 UPDATE
                             event_status = InfoUpdateStatus.objects.filter(
-                                stock_event_id=event_info.first().stock_event_id).filter(table_type='P')
+                                stock_event_id=event_info.first().stock_event_id).filter(
+                                table_type=dbTableType('종목수정종가'))
 
                             if (today_org - datetime.timedelta(
                                     days=1)).date() > event_status.first().mod_dt:  # 실행날짜를 제외하고 1일이상 누락된 경우
@@ -312,7 +313,8 @@ def manage_event_daily():
                         if not holiday:
                             if not new_event_yn:
                                 event_status = InfoUpdateStatus.objects.filter(
-                                    stock_event_id=event_info.first().stock_event_id).filter(table_type='P')
+                                    stock_event_id=event_info.first().stock_event_id).filter(
+                                    table_type=dbTableType('종목수정종가'))
                                 if event_status.first().mod_dt.strftime('%Y%m%d') == today:
                                     logger.info('{}금일 UPDATE 됨. skip'.format(logger_method))
                                     # logger.info('{}금일 UPDATE : code = {}'.format(logger_method, k))
@@ -350,9 +352,10 @@ def manage_event_daily():
                             # 시장명 다르거나 없다면 업데이트
 
                         event_status = InfoUpdateStatus.objects.filter(
-                            stock_event_id=event_info.first().stock_event_id).filter(table_type='P')
+                            stock_event_id=event_info.first().stock_event_id).filter(table_type=dbTableType('종목수정종가'))
                         if len(event_status) == 0:
-                            status_dict = {'table_type': 'P', 'mod_dt': today_org, 'reg_dt': today_org,
+                            status_dict = {'table_type': dbTableType('종목수정종가'), 'mod_dt': today_org,
+                                           'reg_dt': today_org,
                                            'update_type': 'U', 'stock_event_id': event_info.first().stock_event_id}
                             event_status_insert = InfoUpdateStatus(**status_dict)
                             event_status_insert.save()
@@ -396,7 +399,8 @@ def manage_financial_indicator_daily():
 
             # # 가장 최근의 일괄처리 처리 날짜 조회하여 해당날짜 이후부터 INSERT (누락건에 대해 체크)
             # mod_dt를 내림차순으로 정렬
-            event_status = InfoUpdateStatus.objects.filter(table_type='I').distinct().values_list('mod_dt').order_by(
+            event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('지표')).distinct().values_list(
+                'mod_dt').order_by(
                 '-mod_dt')[:1]
 
             scan_date = None
@@ -441,9 +445,9 @@ def manage_financial_indicator_daily():
                         entry.stock_event_id = event_info.first().stock_event_id
                         entry.save()
 
-                    event_status = InfoUpdateStatus.objects.filter(table_type='I')
+                    event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('지표'))
                     if len(event_status) == 0:
-                        status_dict = {'table_type': 'I', 'mod_dt': scan_date, 'reg_dt': scan_date,
+                        status_dict = {'table_type': dbTableType('지표'), 'mod_dt': scan_date, 'reg_dt': scan_date,
                                        'update_type': 'U'}
                         event_status_insert = InfoUpdateStatus(**status_dict)
                         event_status_insert.save()
@@ -457,6 +461,225 @@ def manage_financial_indicator_daily():
 
     except Exception as e:
         logger.exception('{}error occured'.format(logger_method))
+
+
+def manage_foreign_holding_daily():
+    global first
+    logger_method = '[manage_foreign_holding_daily] '
+    try:
+        logger.info('{}start'.format(logger_method))
+        if not first:
+            today_org = datetime.datetime.now()
+            logger.debug('{}cur time = {}'.format(logger_method, str(today_org)))
+            today = today_org.strftime('%Y%m%d')
+
+            cur_event_info = EventInfo.objects.all()
+            cur_event_info_list = []
+            for cur_event in cur_event_info:
+                cur_event_info_list.append(cur_event.stock_event_id)
+            # manage_event_init과 같이 종목을 모두 insert하지 않더라도 skip할수 있어야함.
+
+            id_list = ForeignHoldingVol.objects.distinct().values_list('stock_event_id')
+            for id_tuple in id_list:
+                event_id = id_tuple[0]  # distinct를 이용하면 결과값이 tuple이 된다. 그중 처음값 이용.
+                if event_id not in cur_event_info_list:
+                    # 현재 DB 종목리스트에 등록되어있는 종목이 아니라면 삭제하기
+                    delete_qryset = ForeignHoldingVol.objects.filter(stock_event_id=event_id)
+                    if delete_qryset.count() != 0:
+                        delete_qryset.delete()
+
+            # # 가장 최근의 일괄처리 처리 날짜 조회하여 해당날짜 이후부터 INSERT (누락건에 대해 체크)
+            # mod_dt를 내림차순으로 정렬
+            event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('외국인보유')).distinct().values_list(
+                'mod_dt').order_by(
+                '-mod_dt')[:1]
+
+            scan_date = None
+            if event_status.count() != 0:  # 최근날짜부터 INSERT 이므로 일배치 시작날짜 이전데이터를 가져올 경우는 없다.
+                scan_date = event_status.first()[0]
+            else:  # init 배치를 실행하지 않고 daily 배치 처음 실행하는경우 최근 일주일간 데이터를 가져오기.
+                scan_date = (today_org - datetime.timedelta(days=8)).date()
+            # 하루단위 전체종목 insert
+            while scan_date != today_org.date():  # 날짜별 insert
+                scan_date += datetime.timedelta(days=1)
+                scan_date_str = scan_date.strftime('%Y%m%d')
+                info_df = None
+                try:
+                    info_df = stock_custom.get_exhaustion_rates_of_foreign_investment_by_ticker(date=scan_date_str,
+                                                                                                market='ALL')
+                except Exception as e:
+                    logger.error('{}get data error. date={}, error message={}'.format(logger_method, scan_date_str, e))
+                if info_df is None or len(info_df) == 0:
+                    logger.error('{}get empty data. date={} skip.'.format(logger_method, scan_date_str))
+                    continue
+
+                # 휴일에는 데이터 자체가 아예 없음.
+                # holiday = (info_df[['BPS', 'PER', 'PBR', 'EPS', 'DIV', 'DPS']] == 0).all(
+                #     axis=None)
+                # if holiday:
+                #     continue
+
+                info_df = info_df.replace({np.nan: None})
+                info_df = info_df[['보유수량', '지분율', '한도수량', '한도소진률']]
+                info_df.rename(
+                    columns={'보유수량': 'hold_quantity', '지분율': 'sharehold_rate',
+                             '한도수량': 'limit_quantity', '한도소진률': 'limit_exhaustion_rate'},
+                    inplace=True)
+                info_df['date'] = scan_date
+                with transaction.atomic():
+                    for k, v in info_df.to_dict('index').items():
+                        # 특정 코드 테스트 시 사용
+                        if BATCH_TEST_CODE_YN:
+                            if k not in BATCH_TEST_CODE_LIST:
+                                continue
+                        event_info = EventInfo.objects.filter(event_code=k)
+                        if event_info.count() == 0:  # 정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
+                            # logger.error('{}KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(logger_method, k))
+                            continue
+
+                        entry = ForeignHoldingVol(**v)
+                        entry.stock_event_id = event_info.first().stock_event_id
+                        entry.save()
+
+                    event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('외국인보유'))
+                    if len(event_status) == 0:
+                        status_dict = {'table_type': dbTableType('외국인보유'), 'mod_dt': scan_date, 'reg_dt': scan_date,
+                                       'update_type': 'U'}
+                        event_status_insert = InfoUpdateStatus(**status_dict)
+                        event_status_insert.save()
+                    else:
+                        event_status.update(mod_dt=scan_date)
+
+        else:
+            logger.info('{}manage_event_init executing, so skip daily batch'.format(logger_method))
+
+        logger.info('{}end'.format(logger_method))
+
+    except Exception as e:
+        logger.exception('{}error occured'.format(logger_method))
+
+
+def manage_index_daily():
+    global first
+    logger_method = '[manage_index_daily] '
+    try:
+        logger.info('{}start'.format(logger_method))
+        if not first:
+            today_org = datetime.datetime.now()
+            logger.debug('{}cur time = {}'.format(logger_method, str(today_org)))
+            today = today_org.strftime('%Y%m%d')
+
+            market_list = ["KOSPI", "KOSDAQ", "KRX", "테마"]
+            for market in market_list:
+                market_index_list = []
+                try:
+                    market_index_list = stock.get_index_ticker_list(today, market)
+                except Exception as e:
+                    logger.error('{}get index ticker list error, market={}, e={}'.format(logger_method, market, e))
+                if len(market_index_list) == 0:
+                    logger.error(
+                        '{}empty index list. skip for protect db data. market={}'.format(logger_method, market))
+                    continue
+
+                # 신규 및 삭제종목 추리기.
+                new_index_list = []
+                del_index_list = []
+
+                # 테스트를 위한 신규 및 삭제종목 관련 작업 스킵여부
+                if not SKIP_MANAGE_INDEX_BASIC:
+                    regist_index_qryset = IndexBasicInfo.objects.filter(mkt_code=krxIndexMarketCode(market))
+                    if regist_index_qryset.count() == 0:  # 처음 등록될 경우에는 모두다 INSERT
+                        new_index_list.extend(market_index_list)
+                    else:
+                        del_index_list.extend(market_index_list)  # 모두다 추가한다음 소거법으로 진행
+                        for market_index_code in market_index_list:
+                            code_exist = False
+                            code_new = False
+                            for regist_index in regist_index_qryset:
+                                if regist_index.index_code == market_index_code:
+                                    code_exist = True
+                                    # DB 에서 존재하는 종목 중 시장에서 존재하는 종목 말고는 모두 제거되어야 하는 종목임.
+                                    del_index_list.remove(market_index_code)
+
+                            if not code_exist:  # 시장 항목중 DB에 등록된 종목이 아니라면 신규종목으로 간주
+                                code_new = True
+                                new_index_list.append(market_index_code)
+
+                    # 시장에서 삭제된 지수 db에서 삭제
+                    for del_code in del_index_list:
+                        with transaction.atomic():
+                            del_index_qryset = IndexBasicInfo.objects.filter(event_code=del_code)
+                            if del_index_qryset.count() != 0:
+                                logger.info('{}지수 삭제 : {} / {}'.format(logger_method,
+                                                                       del_index_qryset.first().index_code,
+                                                                       del_index_qryset.first().index_nm))
+                                # indexbasic 테이블 업데이트 - 삭제 종목
+                                del_index_id = del_index_qryset.first().del_index_id
+                                del_index_qryset.delete()
+
+                                # stockprice 테이블 업데이트 - 삭제 종목
+                                del_index_price = IndexPriceInfo.objects.filter(stock_index_id=del_index_id)
+                                del_index_price.delete()
+
+                                # 관리상태정보 삭제
+                                del_event_status = InfoUpdateStatus.objects.filter(stock_event_id=del_index_id) \
+                                    .filter(table_type=dbTableType('지수가'))
+                                del_event_status.delete()
+
+                    # 신규 지수에 대해 insert 작업 진행
+                    for new_index_code in new_index_list:
+                        name = stock.get_index_ticker_name(new_index_code)
+                        event_list = stock.get_index_portfolio_deposit_file(date=today, ticker=new_index_code)
+
+                        v = {'index_code': new_index_code, 'index_nm': name, 'index_dense_nm': name.replace(" ", ""),
+                             'mkt_code': krxIndexMarketCode(market)}
+                        entry = IndexBasicInfo(**v)
+                        entry.save()
+
+                    # 업데이트된 모든 지수에 대해 구성지수종목 업데이트 및 삭제.
+
+                    with transaction.atomic():
+                        for market_index_code in market_index_list:
+                            market_event_list = []
+                            try:
+                                market_event_list = stock.get_index_portfolio_deposit_file(date=today,
+                                                                                           ticker=market_index_code)
+                            except Exception as e:
+                                logger.error('{}get index ticker list error, market={}, index={}, e={}'
+                                             .format(logger_method, market, market_index_code, e))
+                            if len(market_event_list) == 0:
+                                logger.error('{}empty event list. skip for protect db data. market={}, index={}'
+                                             .format(logger_method, market, market_index_code))
+                                continue
+
+                            new_event_list = []
+                            del_event_list = []
+                            regist_event_qryset = IndexContainMapInfo.objects.filter(stock_index_id=market_index_code)
+                            if regist_event_qryset.count() == 0:  # 처음 등록될 경우에는 모두다 INSERT
+                                new_event_list.extend(market_event_list)
+                            else:
+                                del_index_list.extend(market_event_list)  # 모두다 추가한다음 소거법으로 진행
+                                for market_event_code in market_event_list:
+                                    code_exist = False
+                                    code_new = False
+                                    for regist_event in regist_event_qryset:
+                                        if regist_event.event_code == market_event_code:
+                                            code_exist = True
+                                            # DB 에서 존재하는 종목 중 시장에서 존재하는 종목 말고는 모두 제거되어야 하는 종목임.
+                                            del_event_list.remove(market_event_code)
+
+                                    if not code_exist:  # 시장 항목중 DB에 등록된 종목이 아니라면 신규종목으로 간주
+                                        code_new = True
+                                        new_event_list.append(market_event_code)
+
+                                for del_event in del_event_list:
+                                    pass
+
+                # index 가격정보가져올때 지수명으로 가격을 업데이트해야함.
+
+
+    except Exception as e:
+        print()
 
 
 # 시가총액과 상장주식수에 대해 종목별 UPDATE
@@ -481,7 +704,7 @@ def manage_event_init_etc():
                         continue
                 # 기존 등록된 종목인지 확인.
                 event_status = InfoUpdateStatus.objects.filter(stock_event_id=cur_event.stock_event_id) \
-                    .filter(table_type='N')
+                    .filter(table_type=dbTableType('종목미수정종가'))
                 if event_status.count() != 0:  # 이미 등록된 것이면 스킵.
                     logger.info('{}{} already inserted. skip inserting.'.format(logger_method, cur_event.event_code))
                     continue
@@ -521,7 +744,7 @@ def manage_event_init_etc():
                             entry.stock_event_id = cur_event.stock_event_id
                             entry.save()
 
-                status_dict = {'table_type': 'N', 'mod_dt': todate_org, 'reg_dt': todate_org,
+                status_dict = {'table_type': dbTableType('종목미수정종가'), 'mod_dt': todate_org, 'reg_dt': todate_org,
                                'update_type': 'U', 'stock_event_id': cur_event.stock_event_id}
                 event_status_insert = InfoUpdateStatus(**status_dict)
                 event_status_insert.save()
@@ -559,7 +782,7 @@ def manage_event_daily_etc():
 
         # # 가장 오래된 일괄처리 처리 날짜 조회하여 해당날짜 이후부터 INSERT (누락건에 대해 체크)
         # # mod_dt를 오름차순으로 정렬
-        # event_status = InfoUpdateStatus.objects.filter(table_type='N').distinct().values_list('mod_dt').order_by(
+        # event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('종목미수정종가')).distinct().values_list('mod_dt').order_by(
         #     'mod_dt')[:1]
 
         # scan_date = None
@@ -573,7 +796,8 @@ def manage_event_daily_etc():
 
         # # 가장 최근의 일괄처리 처리 날짜 조회하여 해당날짜 이후부터 INSERT (누락건에 대해 체크)
         # mod_dt를 내림차순으로 정렬
-        event_status = InfoUpdateStatus.objects.filter(table_type='N').distinct().values_list('mod_dt').order_by(
+        event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('종목미수정종가')).distinct().values_list(
+            'mod_dt').order_by(
             '-mod_dt')[:1]
 
         scan_date = None
@@ -637,8 +861,8 @@ def manage_event_daily_etc():
                         entry = NotAdjPriceInfo(**v)
                         entry.stock_event_id = event_info.first().stock_event_id
                         entry.save()
-                        print(event_info.first())
-                        print(event_info.first().mkt_status)
+                        # print(event_info.first())
+                        # print(event_info.first().mkt_status)
                         if event_info.first().mkt_status is None or event_info.first().mkt_status != krxMarketStatusCode(
                                 '정상'):
                             event_info.update(mkt_status=krxMarketStatusCode('정상'))
@@ -655,9 +879,9 @@ def manage_event_daily_etc():
                     if event_info.first().mkt_code is None or event_info.first().mkt_code != event_mkt_code:
                         event_info.update(mkt_code=event_mkt_code)
 
-                event_status = InfoUpdateStatus.objects.filter(table_type='N')
+                event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('종목미수정종가'))
                 if len(event_status) == 0:
-                    status_dict = {'table_type': 'N', 'mod_dt': scan_date, 'reg_dt': scan_date,
+                    status_dict = {'table_type': dbTableType('종목미수정종가'), 'mod_dt': scan_date, 'reg_dt': scan_date,
                                    'update_type': 'U'}
                     event_status_insert = InfoUpdateStatus(**status_dict)
                     event_status_insert.save()
@@ -1349,7 +1573,6 @@ def isIncludeRecent3Qt(cur_qt: str, scan_qt: str):
         return True
     else:
         return False
-
 
 # def validateQuarter(qt: str, stock_event_id: int):
 #     qt_origin = datetime.datetime.strptime(qt, '%Y%m')

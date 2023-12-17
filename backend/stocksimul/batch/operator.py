@@ -3,13 +3,15 @@ from apscheduler.triggers.cron import CronTrigger
 from django.conf import settings
 from django_apscheduler.jobstores import DjangoJobStore
 from .stock_batch import manage_event_init, manage_event_daily, validate_connection, \
-    manage_event_daily_etc, manage_financial_indicator_daily, manage_event_init_etc
+    manage_event_daily_etc, manage_financial_indicator_daily, manage_event_init_etc, \
+    manage_foreign_holding_daily
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 import traceback
 import datetime
 from ..config.stockConfig import BATCH_HOUR, BATCH_MIN, BATCH_SEC, BATCH_TEST, \
     ETC_BATCH_HOUR, ETC_BATCH_MIN, ETC_BATCH_SEC, ETC_BATCH_IMMEDIATE, \
-    INDIC_BATCH_HOUR, INDIC_BATCH_MIN, INDIC_BATCH_SEC, INDIC_BATCH_IMMEDIATE
+    INDIC_BATCH_HOUR, INDIC_BATCH_MIN, INDIC_BATCH_SEC, INDIC_BATCH_IMMEDIATE, \
+    FOREIGN_BATCH_HOUR, FOREIGN_BATCH_MIN, FOREIGN_BATCH_SEC, FOREIGN_BATCH_IMMEDIATE
 import logging
 from .stock_batch_manager import StockBatchManager
 from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
@@ -90,6 +92,20 @@ class operator:
                                    minute=indic_daily_batch_time.minute,
                                    second=indic_daily_batch_time.second,
                                    id='manage_financial_indicator_daily',
+                                   replace_existing=True)
+
+            foreign_daily_batch_time = None
+            if FOREIGN_BATCH_IMMEDIATE:
+                foreign_daily_batch_time = today_org + datetime.timedelta(seconds=40)
+            else:
+                foreign_daily_batch_time = datetime.datetime.combine(
+                    datetime.date(today_org.year, today_org.month, today_org.day),
+                    datetime.time(FOREIGN_BATCH_HOUR, FOREIGN_BATCH_MIN, FOREIGN_BATCH_SEC))
+
+            self.scheduler.add_job(manage_foreign_holding_daily(), 'cron', hour=foreign_daily_batch_time.hour,
+                                   minute=foreign_daily_batch_time.minute,
+                                   second=foreign_daily_batch_time.second,
+                                   id='manage_foreign_holding_daily',
                                    replace_existing=True)
 
             # if BATCH_TEST:

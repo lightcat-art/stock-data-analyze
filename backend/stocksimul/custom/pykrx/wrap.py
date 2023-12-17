@@ -110,3 +110,62 @@ def get_market_ohlcv_by_ticker_all(date: str, market: str = "KOSPI") -> DataFram
         "등락률": np.float32
     })
     return df
+
+
+def get_exhaustion_rates_of_foreign_investment_by_ticker(
+        date: str, market: str, balance_limit: bool) -> DataFrame:
+    """[12023] 외국인보유량(개별종목) - 전종목
+
+    Args:
+        date          (str ): 조회 일자 (YYYYMMDD)
+        market        (str ): 조회 시장 (KOSPI/KOSDAQ/ALL)
+        balance_limit (bool): 외국인보유제한종목
+            - 0 : check X
+            - 1 : check O
+
+    Returns:
+        DataFrame:
+                    상장주식수    보유수량     지분율    한도수량  한도소진률
+            티커
+            003490   94844634   12350096  13.023438   47412833  26.046875
+            003495    1110794      29061   2.619141     555286   5.230469
+            015760  641964077  127919592  19.937500  256785631  49.812500
+            017670   80745711   28962369  35.875000   39565398  73.187500
+            020560  223235294   13871465   6.210938  111595323  12.429688
+    """
+
+    market2mktid = {
+        "ALL": "ALL",
+        "KOSPI": "STK",
+        "KOSDAQ": "KSQ",
+        "KONEX": "KNX"
+    }
+
+    balance_limit = 1 if balance_limit else 0
+    df = 외국인보유량_전종목().fetch(date, market2mktid[market], balance_limit)
+    if df is not None and not df.empty:
+        df = df[['ISU_SRT_CD', 'LIST_SHRS', 'FORN_HD_QTY', 'FORN_SHR_RT',
+                 'FORN_ORD_LMT_QTY', 'FORN_LMT_EXHST_RT']]
+        df.columns = ['티커', '상장주식수', '보유수량', '지분율', '한도수량',
+                      '한도소진률']
+        df = df.replace('', '0', regex=True)
+        df = df.replace(',', '', regex=True)
+        df = df.astype({
+            "상장주식수": np.int64,
+            "보유수량": np.int64,
+            "지분율": np.float16,
+            "한도수량": np.int64,
+            "한도소진률": np.float16
+        })
+        df = df.set_index('티커')
+        df = df.sort_index()
+    return df
+
+
+def datetime2string(dt, freq='d'):
+    if freq.upper() == 'Y':
+        return dt.strftime("%Y")
+    elif freq.upper() == 'M':
+        return dt.strftime("%Y%m")
+    else:
+        return dt.strftime("%Y%m%d")

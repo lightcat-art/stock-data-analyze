@@ -300,9 +300,52 @@ def mainIndicatorTest():
     print(indic_info_df)
 
 
+# 외국인 보유량 관련 체크
+# balance_limit이 False라면 외국인 보유제한종목만 보여지게됨.
+def get_exhaustion_rates_of_foreign_investment_by_ticker(date, market, balance_limit):
+    df = None
+    try:
+        df = stock.get_exhaustion_rates_of_foreign_investment_by_ticker(date, market, balance_limit)
+        print(len(df))
+        df = df.reset_index()
+        if (df['티커'] == '003495').any():
+            print(df[df['티커'] == '003495'])
+    except Exception as e:
+        print(e)
+    # print(df)
+
+
+# 매수 매도량 조회
+def get_market_net_purchases_of_equities(fromdate, todate, market, investor):
+    stock.get_market_net_purchases_of_equities(fromdate, todate, market, investor)
+
+
+def get_index_info(date, market):
+    index_list = stock.get_index_ticker_list(date, market)
+    for ticker in index_list:
+        name = stock.get_index_ticker_name(ticker)
+        event_list = stock.get_index_portfolio_deposit_file(date=date, ticker=ticker)
+        print('ticker={}, name={}, event_list={}'.format(ticker, name, event_list))
+
+
+def get_index_ohlc(date, market):
+    print(stock.get_index_ohlcv_by_ticker(date=date, market=market))
+
+
 if __name__ == "__main__":
     # get_market_sector_classifications_test("20231201", "KOSPI")
-    test_custom_krx_api_by_ticker()
+    # test_custom_krx_api_by_ticker()
+    # get_exhaustion_rates_of_foreign_investment_by_ticker('20231214', 'ALL', True)
+    get_exhaustion_rates_of_foreign_investment_by_ticker('20231003', 'ALL', False)
+    # get_index_info('20231214', 'KOSPI')
+    # get_index_info('20231214', 'KOSDAQ')
+    # get_index_info('20231214', 'KONEX')
+    # get_index_info('20231214', '테마')
+
+    # get_index_ohlc('20231214', 'KOSPI')
+    # get_index_ohlc('20231214', 'KOSDAQ')
+    # get_index_ohlc('20231214', '테마')
+    # get_index_ohlc('20231214', 'KRX')
 
     # flagComparison(2**11)
     # get_stock_tot_qy_state('삼성전자우', 2022, '1')
