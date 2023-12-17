@@ -106,7 +106,7 @@ class InfoUpdateStatus(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['table_type', 'class_id'], name='idx_update_status_1'),
+            models.Index(fields=['table_type', 'stock_event_id'], name='idx_update_status_1'),
         ]
 
 
