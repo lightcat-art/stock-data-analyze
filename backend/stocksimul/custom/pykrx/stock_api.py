@@ -139,3 +139,53 @@ def get_exhaustion_rates_of_foreign_investment_by_ticker(
 
     return wrap.get_exhaustion_rates_of_foreign_investment_by_ticker(
         date, market, balance_limit)
+
+
+def get_index_ohlcv_by_ticker(
+        date, market: str = "KOSPI", alternative: bool = False):
+    """티커별로 정리된 전종목 OHLCV
+
+    Args:
+        date   (str): 조회 일자 (YYYYMMDD)
+        market (str): 조회 시장 (KOSPI/KOSDAQ/KRX/테마/ALL)
+        alternative (bool, optional): 휴일일 경우 이전 영업일 선택 여부
+
+    Returns:
+        DataFrame:
+
+            >> get_index_ohlcv_by_ticker("20210122")
+
+                                    시가      고가       저가     종가      거래량        거래대금  상장시가총액  
+                                                                                                    등락유형 등락폭 등락률
+            지수명
+            코스피외국주포함        0.00      0.00      0.00      0.00  1111222984  24305355507985
+            코스피               3163.83   3185.26   3140.60   3140.63  1110004515  24300291238350
+            코스피200             430.73    433.84    427.13    427.13   269257473  19087641760593
+            코스피100            3295.34   3318.12   3266.10   3266.10   164218193  15401724965613
+            코스피50             3034.99   3055.71   3008.02   3008.02   110775949  13083864634083
+
+            >> get_index_ohlcv_by_ticker("20210122", "KOSDAQ")
+
+                                    시가      고가      저가       종가      거래량        거래대금  상장시가총액  
+                                                                                                    등락유형 등락폭 등락률
+            지수명
+            코스닥외국주포함         0.00      0.00      0.00      0.00  2288183346  15030875451228
+            코스닥지수             982.20    984.67    975.05    979.98  2228382472  14929462086998
+            코스닥150             1495.47   1501.68   1482.26   1492.01   104675565   3789026943821
+            코스닥150정보기술      868.99    873.55    852.24    852.71    37578587    998283997365
+            코스닥150헬스케어     4928.03   4974.17   4855.87   4949.63    21481119   1364482054586
+
+        NOTE: 거래정지 종목은 종가만 존재하며 나머지는 0으로 채워진다.
+    """  # pylint: disable=line-too-long # noqa: E501
+
+    if isinstance(date, datetime.datetime):
+        date = krx.datetime2string(date)
+
+    date = date.replace("-", "")
+
+    df = krx.get_index_ohlcv_by_ticker(date, market)
+    holiday = (df[['시가', '고가', '저가', '종가']] == 0).all(axis=None)
+    if holiday and alternative:
+        target_date = get_nearest_business_day_in_a_week(date=date, prev=True)
+        df = krx.get_index_ohlcv_by_ticker(target_date, market)
+    return df

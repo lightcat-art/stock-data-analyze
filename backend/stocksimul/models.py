@@ -97,13 +97,19 @@ class InfoUpdateStatus(models.Model):
     stock_info_update_status_id = models.AutoField(primary_key=True)
     # 'P' : priceinfo, 'N' : notadjpriceinfo, 'I' : financial indicator , 'H' : ForeignHoldingVol
     table_type = models.CharField(max_length=1)
-    stock_event_id = models.IntegerField(default=-1)
+    class_id = models.CharField(max_length=10, default=-1)
 
     update_type = models.CharField(max_length=1, default='N')  # N : 업데이트안됨, U : 업데이트완료
     mod_dt = models.DateField()
     reg_dt = models.DateField()
 
     objects = models.Manager()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['table_type'], name='idx_update_status_1'),
+            models.Index(fields=['table_type', 'class_id'], name='idx_update_status_2'),
+        ]
 
 
 class FinancialIndicator(models.Model):

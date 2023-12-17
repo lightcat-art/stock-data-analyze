@@ -162,6 +162,58 @@ def get_exhaustion_rates_of_foreign_investment_by_ticker(
     return df
 
 
+@dataframe_empty_handler
+def get_index_ohlcv_by_ticker(date: str, market: str = "KOSPI") -> DataFrame:
+    """전종목 지수 OHLCV
+
+    Args:
+        fromdate (str         ): 조회 일자 (YYYYMMDD)
+        계열구분 (str, optional): KRX/KOSPI/KOSDAQ/테마
+
+    Returns:
+        DataFrame:
+
+            > get_index_ohlcv_by_date("20211126", "KOSPI")
+
+                                    시가      고가      저가       종가     거래량         거래대금
+            지수명
+            코스피외국주포함         0.00      0.00      0.00      0.00  595597647   11901297731572
+            코스피                2973.04   2985.77   2930.31   2936.44  594707257   11894910355357
+            코스피200              390.61    392.81    384.19    385.07  145771166    8625603922656
+            코스피100             2947.18   2963.27   2900.41   2906.68  100357121    7370285846691
+            코스피50              2736.77   2752.70   2693.90   2700.81   52627040    5768837287881
+    """  # pylint: disable=line-too-long # noqa: E501
+
+    market2idx = {
+        "KRX": "01",
+        "KOSPI": "02",
+        "KOSDAQ": "03",
+        "테마": "04"
+    }
+    df = 전체지수시세().fetch(date, market2idx[market])
+    df = df[['IDX_NM', 'OPNPRC_IDX', 'HGPRC_IDX', 'LWPRC_IDX',
+             'CLSPRC_IDX', 'ACC_TRDVOL', 'ACC_TRDVAL', 'MKTCAP', 'FLUC_TP_CD', 'CMPPREVDD_IDX', 'FLUC_RT']]
+    df.columns = ['지수명', '시가', '고가', '저가', '종가', '거래량',
+                  '거래대금', '상장시가총액', '등락유형', '등락폭', '등락률']
+    df = df.replace(r'[^-\w\.]', '', regex=True)
+    df = df.replace(r'\-$', '0', regex=True)
+    df = df.replace('', '0')
+    df = df.set_index('지수명')
+    df = df.astype({
+        '시가': np.float64,
+        '고가': np.float64,
+        '저가': np.float64,
+        '종가': np.float64,
+        '거래량': np.int64,
+        '거래대금': np.int64,
+        '상장시가총액': np.int64,
+        '등락유형': np.int32,
+        '등락폭': np.float64,
+        '등락률': np.float64,
+    })
+    return df
+
+
 def datetime2string(dt, freq='d'):
     if freq.upper() == 'Y':
         return dt.strftime("%Y")
