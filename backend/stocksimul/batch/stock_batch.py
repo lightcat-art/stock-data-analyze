@@ -567,8 +567,9 @@ def manage_index_daily():
     try:
         logger.info('{}start'.format(logger_method))
         if not first:
+            # today_org = datetime.datetime.now() - datetime.timedelta(days=5)
             today_org = datetime.datetime.now()
-            logger.debug('{}cur time = {}'.format(logger_method, str(today_org)))
+            logger.info('{}cur time = {}'.format(logger_method, str(today_org)))
             today = today_org.strftime('%Y%m%d')
 
             market_list = ["KOSPI", "KOSDAQ", "KRX", "테마"]
@@ -591,15 +592,15 @@ def manage_index_daily():
 
                 # 테스트를 위한 신규 및 삭제종목 관련 작업 스킵여부
                 if not SKIP_MANAGE_INDEX_BASIC:
-                    regist_index_qryset = IndexBasicInfo.objects.filter(mkt_code=krxIndexMarketCode(market))
-                    if regist_index_qryset.count() == 0:  # 처음 등록될 경우에는 모두다 INSERT
+                    regist_index_qryset_by_market = IndexBasicInfo.objects.filter(mkt_code=krxIndexMarketCode(market))
+                    if regist_index_qryset_by_market.count() == 0:  # 처음 등록될 경우에는 모두다 INSERT
                         new_index_list.extend(market_index_list)
                     else:
                         del_index_list.extend(market_index_list)  # 모두다 추가한다음 소거법으로 진행
                         for market_index_code in market_index_list:
                             code_exist = False
                             code_new = False
-                            for regist_index in regist_index_qryset:
+                            for regist_index in regist_index_qryset_by_market:
                                 if regist_index.index_code == market_index_code:
                                     code_exist = True
                                     exi_index_list.append(market_index_code)
@@ -650,9 +651,13 @@ def manage_index_daily():
 
                         # 업데이트된 모든 지수에 대해 구성지수종목 업데이트 및 삭제.
                         for market_index_code in market_index_list:
-                            if market_index_code not in new_index_list and market_index_code not in exi_index_list:
+                            regist_index_qryset = IndexBasicInfo.objects.filter(index_code=market_index_code)
+                            if regist_index_qryset.count() == 0:
                                 logger.error('index is not synchronized with db. skip.')
                                 continue
+                            # if market_index_code not in new_index_list and market_index_code not in exi_index_list:
+                            #     logger.error('index is not synchronized with db. skip.')
+                            #     continue
                             market_event_list = []
                             try:
                                 market_event_list = stock.get_index_portfolio_deposit_file(date=today,
@@ -668,7 +673,8 @@ def manage_index_daily():
 
                             new_event_list = []
                             del_event_list = []
-                            regist_event_qryset = IndexContainMapInfo.objects.filter(index_code=market_index_code)
+                            regist_event_qryset = IndexContainMapInfo.objects.filter(
+                                stock_index_id=regist_index_qryset.first().stock_index_id)
                             if regist_event_qryset.count() == 0:  # 처음 등록될 경우에는 모두다 INSERT
                                 new_event_list.extend(market_event_list)
                             else:
@@ -688,13 +694,13 @@ def manage_index_daily():
 
                             # 삭제될 지수구성종목 모두 조회 및 삭제.
                             del_event_qryset = IndexContainMapInfo.objects.filter(
-                                stock_index_id=regist_event_qryset.first().stock_index_id).filter(
+                                stock_index_id=regist_index_qryset.first().stock_index_id).filter(
                                 event_code__in=del_event_list)
                             del_event_qryset.delete()
 
                             # 신규 지수구성종목에 대해 insert 작업 진행
                             for new_event_code in new_event_list:
-                                v = {'stock_index_id': regist_event_qryset.first().stock_index_id,
+                                v = {'stock_index_id': regist_index_qryset.first().stock_index_id,
                                      'event_code': new_event_code}
                                 entry = IndexContainMapInfo(**v)
                                 entry.save()
@@ -714,7 +720,7 @@ def manage_index_daily():
                     scan_date = (today_org - datetime.timedelta(days=8)).date()
 
                 # 하루단위 전체종목 insert
-                while scan_date != today_org.date():  # 날짜별 insert
+                while scan_date < today_org.date():  # 날짜별 insert
                     scan_date += datetime.timedelta(days=1)
                     scan_date_str = scan_date.strftime('%Y%m%d')
                     info_df = None
