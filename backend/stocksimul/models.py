@@ -151,8 +151,8 @@ class ForeignHoldingVol(models.Model):
 class IndexBasicInfo(models.Model):
     stock_index_id = models.AutoField(primary_key=True)
     index_code = models.CharField(max_length=10, default=-1)
-    index_nm = models.CharField(max_length=100)
-    # index_dense_nm = models.CharField(max_length=100)
+    index_nm = models.CharField(max_length=100, null=True)
+    index_dense_nm = models.CharField(max_length=100, null=True)
     mkt_code = models.CharField(max_length=3, null=True)
 
     objects = models.Manager()
@@ -162,7 +162,7 @@ class IndexBasicInfo(models.Model):
             models.Index(fields=['index_code'], name='idx_ib_info_1'),
             models.Index(fields=['index_nm'], name='idx_ib_info_2'),
             models.Index(fields=['mkt_code'], name='idx_ib_info_3'),
-            # models.Index(fields=['index_dense_nm'], name='idx_ib_info_4'),
+            models.Index(fields=['index_dense_nm'], name='idx_ib_info_4'),
         ]
 
 

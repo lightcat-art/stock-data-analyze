@@ -10,13 +10,15 @@ import numpy as np
 from numpy.lib import math
 import logging
 from ..config.stockConfig import BATCH_TEST_CODE_YN, BATCH_TEST_CODE_LIST, SKIP_MANAGE_EVENT_INIT, \
-    FIRST_BATCH_TODATE, FUND_API_REQUEST_TERM, FUND_SKIP_CO, FUND_SKIP_FINSTATE, SKIP_MANAGE_INDEX_BASIC
+    FIRST_BATCH_TODATE, FUND_API_REQUEST_TERM, FUND_SKIP_CO, FUND_SKIP_FINSTATE, SKIP_MANAGE_INDEX_BASIC, \
+    INDEX_DAILY_API_REQUEST_TERM
 from ..custom.opendartreader.dart_manager import DartManager
 from ..custom.opendartreader.dart_config import DartFinstateConfig, DartStockSharesConfig
 from ..custom import pykrx as stock_custom
 from .stock_batch_manager import StockBatchManager
 from ..config.classificationCode import krxMarketCode, krxMarketStatusCode, dbTableType, dbUpdateType, \
     krxIndexMarketCode
+import re
 
 '''
 1. api 통신을 통해 현재 마켓에 등록된 종목정보를 모두 받아온다.
@@ -637,25 +639,27 @@ def manage_index_daily():
                         for new_index_code in new_index_list:
                             name = stock.get_index_ticker_name(new_index_code)
                             event_list = stock.get_index_portfolio_deposit_file(date=today, ticker=new_index_code)
-
+                            pattern = r'[^a-zA-Z0-9가-힣\s]'
+                            # 특수문자를 공백으로 치환
+                            index_dense_nm = re.sub(pattern, '', name)
                             v = {'index_code': new_index_code, 'index_nm': name,
-                                 # 'index_dense_nm': name.replace(" ", ""),
+                                 'index_dense_nm': index_dense_nm,
                                  'mkt_code': krxIndexMarketCode(market)}
                             entry = IndexBasicInfo(**v)
                             entry.save()
 
                         # 업데이트된 모든 지수에 대해 구성지수종목 업데이트 및 삭제.
                         for market_index_code in market_index_list:
-                            if market_index_code not in new_index_list or market_index_code not in exi_index_list:
+                            if market_index_code not in new_index_list and market_index_code not in exi_index_list:
                                 logger.error('index is not synchronized with db. skip.')
                                 continue
                             market_event_list = []
                             try:
                                 market_event_list = stock.get_index_portfolio_deposit_file(date=today,
                                                                                            ticker=market_index_code)
-                                time.sleep(0.2)
+                                time.sleep(INDEX_DAILY_API_REQUEST_TERM)
                             except Exception as e:
-                                logger.error('{}get index ticker list error, market={}, index={}, e={}'
+                                logger.error('{}get event ticker list error, market={}, index={}, e={}'
                                              .format(logger_method, market, market_index_code, e))
                             if len(market_event_list) == 0:
                                 logger.error('{}empty event list. skip for protect db data. market={}, index={}'
@@ -735,36 +739,40 @@ def manage_index_daily():
                     info_df.rename(
                         columns={'시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
                                  '저가': 'low', '거래대금': 'value', '등락률': 'up_down_rate',
-                                 '등락유형': 'up_down_sort', '등락폭': 'up_down_value', '시가총액': 'market_cap'},
+                                 '등락유형': 'up_down_sort', '등락폭': 'up_down_value', '상장시가총액': 'market_cap'},
                         inplace=True)
                     info_df['date'] = scan_date
+                    with transaction.atomic():
+                        for k, v in info_df.to_dict('index').items():
+                            # 특정 코드 테스트 시 사용
+                            # if BATCH_INDEX_TEST_CODE_YN:
+                            #     if k not in BATCH_INDEX_TEST_CODE_LIST:
+                            #         continue
+                            if k == '코스닥지수':
+                                k = '코스닥'
+                            index_info = IndexBasicInfo.objects.filter(index_dense_nm=k)
+                            if index_info.count() == 0:  # 정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
+                                # logger.error('{}KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(logger_method, k))
+                                continue
 
-                    for k, v in info_df.to_dict('index').items():
-                        # 특정 코드 테스트 시 사용
-                        # if BATCH_INDEX_TEST_CODE_YN:
-                        #     if k not in BATCH_INDEX_TEST_CODE_LIST:
-                        #         continue
-                        index_info = IndexBasicInfo.objects.filter(index_nm=k)
-                        if index_info.count() == 0:  # 정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
-                            # logger.error('{}KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(logger_method, k))
-                            continue
+                            entry = IndexPriceInfo(**v)
+                            entry.stock_index_id = index_info.first().stock_index_id
+                            entry.save()
 
-                        entry = IndexPriceInfo(**v)
-                        entry.stock_index_id = index_info.first().stock_index_id
-                        entry.save()
-
-                    # 시장종류별로 최신일 status 업데이트.
-                    event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('지수가'))
-                    if len(event_status) == 0:
-                        status_dict = {'table_type': dbTableType('지수가'), 'mod_dt': scan_date,
-                                       'reg_dt': scan_date,
-                                       'update_type': 'U', 'class_id': krxIndexMarketCode(market)}
-                        event_status_insert = InfoUpdateStatus(**status_dict)
-                        event_status_insert.save()
-                    else:
-                        event_status.update(mod_dt=scan_date)
+                        # 시장종류별로 최신일 status 업데이트.
+                        event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('지수가'))
+                        if len(event_status) == 0:
+                            status_dict = {'table_type': dbTableType('지수가'), 'mod_dt': scan_date,
+                                           'reg_dt': scan_date,
+                                           'update_type': 'U', 'class_id': krxIndexMarketCode(market)}
+                            event_status_insert = InfoUpdateStatus(**status_dict)
+                            event_status_insert.save()
+                        else:
+                            event_status.update(mod_dt=scan_date)
         else:
             logger.info('{}manage_event_init executed. skip.'.format(logger_method))
+
+        logger.info('{}end'.format(logger_method))
 
     except Exception as e:
         logger.exception('{}error occured'.format(logger_method))

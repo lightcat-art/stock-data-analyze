@@ -329,7 +329,8 @@ def get_index_info(date, market):
 
 
 def get_index_ohlc(date, market):
-    print(stock.get_index_ohlcv_by_ticker(date=date, market=market))
+    df = stock.get_index_ohlcv_by_ticker(date=date, market=market)
+    return
 
 
 if __name__ == "__main__":
@@ -342,9 +343,9 @@ if __name__ == "__main__":
     # get_index_info('20231214', 'KONEX')
     # get_index_info('20231214', '테마')
 
-    get_index_ohlc('20231216', 'KOSPI')
+    # get_index_ohlc('20231215', 'KOSPI')
     # get_index_ohlc('20231214', 'KOSDAQ')
-    # get_index_ohlc('20231214', '테마')
+    get_index_ohlc('20231214', '테마')
     # get_index_ohlc('20231214', 'KRX')
 
     # flagComparison(2**11)

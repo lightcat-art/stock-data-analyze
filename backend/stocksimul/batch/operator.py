@@ -117,7 +117,7 @@ class operator:
                     datetime.date(today_org.year, today_org.month, today_org.day),
                     datetime.time(INDEX_BATCH_HOUR, INDEX_BATCH_MIN, INDEX_BATCH_SEC))
 
-            self.scheduler.add_job(manage_index_daily(), 'cron', hour=index_daily_batch_time.hour,
+            self.scheduler.add_job(manage_index_daily, 'cron', hour=index_daily_batch_time.hour,
                                    minute=index_daily_batch_time.minute,
                                    second=index_daily_batch_time.second,
                                    id='manage_index_daily',
