@@ -95,8 +95,7 @@ class NotAdjPriceInfo(models.Model):
 
 class InfoUpdateStatus(models.Model):
     stock_info_update_status_id = models.AutoField(primary_key=True)
-    # 'P' : priceinfo, 'N' : notadjpriceinfo, 'I' : financial indicator , 'H' : ForeignHoldingVol
-    table_type = models.CharField(max_length=1)
+    table_type = models.CharField(max_length=2)  # classificationCode 소스에 관리
     class_id = models.CharField(max_length=10, default=-1)
 
     update_type = models.CharField(max_length=1, default='N')  # N : 업데이트안됨, U : 업데이트완료
