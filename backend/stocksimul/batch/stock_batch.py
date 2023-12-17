@@ -97,7 +97,7 @@ def manage_event_init():
                 # 기존 등록된 종목인지 확인.
                 event_info = EventInfo.objects.filter(event_code=event_code)
                 if event_info.count() != 0:
-                    event_status = InfoUpdateStatus.objects.filter(class_id=event_info.first().stock_event_id) \
+                    event_status = InfoUpdateStatus.objects.filter(stock_event_id=event_info.first().stock_event_id) \
                         .filter(table_type=dbTableType('종목수정종가'))
                     if event_status.count() != 0:  # 이미 등록된 것이면 스킵.
                         logger.info('{}{} already inserted. skip inserting.'.format(logger_method, item['event_code']))
@@ -148,7 +148,7 @@ def manage_event_init():
 
                 status_dict = {'table_type': dbTableType('종목수정종가'), 'mod_dt': todate_org, 'reg_dt': todate_org,
                                'update_type': 'U',
-                               'class_id': event_info.first().stock_event_id}
+                               'stock_event_id': event_info.first().stock_event_id}
                 event_status_insert = InfoUpdateStatus(**status_dict)
                 event_status_insert.save()
 
@@ -235,7 +235,7 @@ def manage_event_daily():
                             del_event_price.delete()
 
                             # 관리상태정보 삭제
-                            del_event_status = InfoUpdateStatus.objects.filter(class_id=del_event_id) \
+                            del_event_status = InfoUpdateStatus.objects.filter(stock_event_id=del_event_id) \
                                 .filter(table_type=dbTableType('종목수정종가'))
                             del_event_status.delete()
 
@@ -277,7 +277,7 @@ def manage_event_daily():
                             before_insert_yn = True
                         else:  # 기존종목이면 updateStatus를 확인하여 누락된 경우를 체크 후 INSERT 및 UPDATE
                             event_status = InfoUpdateStatus.objects.filter(
-                                class_id=event_info.first().stock_event_id).filter(
+                                stock_event_id=event_info.first().stock_event_id).filter(
                                 table_type=dbTableType('종목수정종가'))
 
                             if (today_org - datetime.timedelta(
@@ -313,7 +313,7 @@ def manage_event_daily():
                         if not holiday:
                             if not new_event_yn:
                                 event_status = InfoUpdateStatus.objects.filter(
-                                    class_id=event_info.first().stock_event_id).filter(
+                                    stock_event_id=event_info.first().stock_event_id).filter(
                                     table_type=dbTableType('종목수정종가'))
                                 if event_status.first().mod_dt.strftime('%Y%m%d') == today:
                                     logger.info('{}금일 UPDATE 됨. skip'.format(logger_method))
@@ -352,11 +352,11 @@ def manage_event_daily():
                             # 시장명 다르거나 없다면 업데이트
 
                         event_status = InfoUpdateStatus.objects.filter(
-                            class_id=event_info.first().stock_event_id).filter(table_type=dbTableType('종목수정종가'))
+                            stock_event_id=event_info.first().stock_event_id).filter(table_type=dbTableType('종목수정종가'))
                         if len(event_status) == 0:
                             status_dict = {'table_type': dbTableType('종목수정종가'), 'mod_dt': today_org,
                                            'reg_dt': today_org,
-                                           'update_type': 'U', 'class_id': event_info.first().stock_event_id}
+                                           'update_type': 'U', 'stock_event_id': event_info.first().stock_event_id}
                             event_status_insert = InfoUpdateStatus(**status_dict)
                             event_status_insert.save()
                         else:
@@ -628,7 +628,7 @@ def manage_index_daily():
                                 del_index_price.delete()
 
                                 # 관리상태정보 삭제
-                                del_event_status = InfoUpdateStatus.objects.filter(class_id=del_index_id) \
+                                del_event_status = InfoUpdateStatus.objects.filter(stock_event_id=del_index_id) \
                                     .filter(table_type=dbTableType('지수가'))
                                 del_event_status.delete()
 
@@ -695,10 +695,10 @@ def manage_index_daily():
 
                 # # 가장 최근의 일괄처리 처리 날짜 조회하여 해당날짜 이후부터 INSERT (누락건에 대해 체크)
                 # mod_dt를 내림차순으로 정렬
-                class_id_item = [krxIndexMarketCode(market), '#']
-                status_class_id = ''.join(class_id_item)
+                stock_event_id_item = [krxIndexMarketCode(market), '#']
+                status_stock_event_id = ''.join(stock_event_id_item)
                 event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('지수가')).filter(
-                    class_id__startswith=status_class_id).distinct().values_list('mod_dt').order_by('-mod_dt')[:1]
+                    stock_event_id__startswith=status_stock_event_id).distinct().values_list('mod_dt').order_by('-mod_dt')[:1]
 
                 scan_date = None
                 if event_status.count() != 0:  # 최근날짜부터 INSERT 이므로 일배치 시작날짜 이전데이터를 가져올 경우는 없다.
@@ -752,7 +752,7 @@ def manage_index_daily():
                 event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('주식가'))
                 if len(event_status) == 0:
                     status_dict = {'table_type': dbTableType('주식가'), 'mod_dt': scan_date, 'reg_dt': scan_date,
-                                   'update_type': 'U', 'class_id': status_class_id}
+                                   'update_type': 'U', 'stock_event_id': status_stock_event_id}
                     event_status_insert = InfoUpdateStatus(**status_dict)
                     event_status_insert.save()
                 else:
@@ -785,7 +785,7 @@ def manage_event_init_etc():
                     if cur_event.event_code not in BATCH_TEST_CODE_LIST:
                         continue
                 # 기존 등록된 종목인지 확인.
-                event_status = InfoUpdateStatus.objects.filter(class_id=cur_event.stock_event_id) \
+                event_status = InfoUpdateStatus.objects.filter(stock_event_id=cur_event.stock_event_id) \
                     .filter(table_type=dbTableType('종목미수정종가'))
                 if event_status.count() != 0:  # 이미 등록된 것이면 스킵.
                     logger.info('{}{} already inserted. skip inserting.'.format(logger_method, cur_event.event_code))
@@ -827,7 +827,7 @@ def manage_event_init_etc():
                             entry.save()
 
                 status_dict = {'table_type': dbTableType('종목미수정종가'), 'mod_dt': todate_org, 'reg_dt': todate_org,
-                               'update_type': 'U', 'class_id': cur_event.stock_event_id}
+                               'update_type': 'U', 'stock_event_id': cur_event.stock_event_id}
                 event_status_insert = InfoUpdateStatus(**status_dict)
                 event_status_insert.save()
         else:
