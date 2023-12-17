@@ -344,8 +344,8 @@ if __name__ == "__main__":
     # get_index_info('20231214', '테마')
 
     # get_index_ohlc('20231215', 'KOSPI')
-    # get_index_ohlc('20231214', 'KOSDAQ')
-    get_index_ohlc('20231214', '테마')
+    get_index_ohlc('20231214', 'KOSDAQ')
+    # get_index_ohlc('20231214', '테마')
     # get_index_ohlc('20231214', 'KRX')
 
     # flagComparison(2**11)

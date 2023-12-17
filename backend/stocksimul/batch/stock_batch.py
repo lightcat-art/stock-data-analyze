@@ -562,221 +562,227 @@ def manage_foreign_holding_daily():
 
 
 def manage_index_daily():
-    global first
     logger_method = '[manage_index_daily] '
     try:
         logger.info('{}start'.format(logger_method))
-        if not first:
-            # today_org = datetime.datetime.now() - datetime.timedelta(days=5)
-            today_org = datetime.datetime.now()
-            logger.info('{}cur time = {}'.format(logger_method, str(today_org)))
-            today = today_org.strftime('%Y%m%d')
+        today_org = datetime.datetime.now()
+        logger.info('{}cur time = {}'.format(logger_method, str(today_org)))
+        today = today_org.strftime('%Y%m%d')
 
-            market_list = ["KOSPI", "KOSDAQ", "KRX", "테마"]
-            for market in market_list:
-                logger.info('{}manage for market {}'.format(logger_method, market))
-                market_index_list = []
+        market_list = ["KOSPI", "KOSDAQ", "KRX", "테마"]
+        for market in market_list:
+            logger.info('{}manage for market {}'.format(logger_method, market))
+            market_index_list = []
+            try:
+                market_index_list = stock.get_index_ticker_list(today, market)
+            except Exception as e:
+                logger.error('{}get index ticker list error, market={}, e={}'.format(logger_method, market, e))
+            if len(market_index_list) == 0:
+                logger.error(
+                    '{}empty index list. skip for protect db data. market={}'.format(logger_method, market))
+                continue
+
+            # 신규 및 삭제종목 추리기.
+            new_index_list = []
+            del_index_list = []
+            exi_index_list = []
+
+            # 테스트를 위한 신규 및 삭제종목 관련 작업 스킵여부
+            if not SKIP_MANAGE_INDEX_BASIC:
+                regist_index_qryset_by_market = IndexBasicInfo.objects.filter(mkt_code=krxIndexMarketCode(market))
+                if regist_index_qryset_by_market.count() == 0:  # 처음 등록될 경우에는 모두다 INSERT
+                    new_index_list.extend(market_index_list)
+                else:
+                    del_index_list.extend(market_index_list)  # 모두다 추가한다음 소거법으로 진행
+                    for market_index_code in market_index_list:
+                        code_exist = False
+                        code_new = False
+                        for regist_index in regist_index_qryset_by_market:
+                            if regist_index.index_code == market_index_code:
+                                code_exist = True
+                                exi_index_list.append(market_index_code)
+                                # DB 에서 존재하는 종목 중 시장에서 존재하는 종목 말고는 모두 제거되어야 하는 종목임.
+                                del_index_list.remove(market_index_code)
+
+                        if not code_exist:  # 시장 항목중 DB에 등록된 종목이 아니라면 신규종목으로 간주
+                            code_new = True
+                            new_index_list.append(market_index_code)
+                with transaction.atomic():
+                    # 시장에서 삭제된 지수 db에서 삭제
+                    for del_code in del_index_list:
+                        del_index_qryset = IndexBasicInfo.objects.filter(event_code=del_code)
+                        if del_index_qryset.count() != 0:
+                            logger.info('{}지수 삭제 : {} / {}'.format(logger_method,
+                                                                   del_index_qryset.first().index_code,
+                                                                   del_index_qryset.first().index_nm))
+                            # indexbasic 테이블 업데이트 - 삭제 종목
+                            del_index_id = del_index_qryset.first().del_index_id
+                            del_index_qryset.delete()
+
+                            # index contain map info 업데이트 - 삭제 종목
+                            del_index_contain_map = IndexContainMapInfo.objects.filter(
+                                stock_index_id=del_index_id)
+                            del_index_contain_map.delete()
+
+                            # stockprice 테이블 업데이트 - 삭제 종목
+                            del_index_price = IndexPriceInfo.objects.filter(stock_index_id=del_index_id)
+                            del_index_price.delete()
+
+                            # 관리상태정보 삭제 - 시장종류별로 관리되므로 지수별 관리 필요없음.
+                            # del_event_status = InfoUpdateStatus.objects.filter(class_id=del_index_id) \
+                            #     .filter(table_type=dbTableType('지수가'))
+                            # del_event_status.delete()
+
+                    # 신규 지수에 대해 insert 작업 진행
+                    for new_index_code in new_index_list:
+                        name = stock.get_index_ticker_name(new_index_code)
+                        logger.info('{}지수 INSERT : {} / {}'.format(logger_method, new_index_code, name))
+                        pattern = r'[^a-zA-Z0-9가-힣]'
+                        # 특수문자를 공백으로 치환
+                        index_dense_nm = re.sub(pattern, '', name)
+                        v = {'index_code': new_index_code, 'index_nm': name,
+                             'index_dense_nm': index_dense_nm,
+                             'mkt_code': krxIndexMarketCode(market)}
+                        entry = IndexBasicInfo(**v)
+                        entry.save()
+
+                    # 업데이트된 모든 지수에 대해 구성지수종목 업데이트 및 삭제.
+                    for market_index_code in market_index_list:
+                        regist_index_qryset = IndexBasicInfo.objects.filter(index_code=market_index_code)
+                        if regist_index_qryset.count() == 0:
+                            logger.error('index is not synchronized with db. skip.')
+                            continue
+                        # if market_index_code not in new_index_list and market_index_code not in exi_index_list:
+                        #     logger.error('index is not synchronized with db. skip.')
+                        #     continue
+                        logger.info('{}지수구성종목 UPDATE : {} / {}'.format(logger_method,
+                                                                       regist_index_qryset.first().index_code,
+                                                                       regist_index_qryset.first().index_nm))
+                        market_event_list = []
+                        try:
+                            market_event_list = stock.get_index_portfolio_deposit_file(date=today,
+                                                                                       ticker=market_index_code)
+                            time.sleep(INDEX_DAILY_API_REQUEST_TERM)
+                        except Exception as e:
+                            logger.error('{}get event ticker list error, market={}, index={}, e={}'
+                                         .format(logger_method, market, market_index_code, e))
+                        if len(market_event_list) == 0:
+                            logger.error('{}empty event list. skip for protect db data. market={}, index={}'
+                                         .format(logger_method, market, market_index_code))
+                            continue
+
+                        new_event_list = []
+                        del_event_list = []
+                        regist_event_qryset = IndexContainMapInfo.objects.filter(
+                            stock_index_id=regist_index_qryset.first().stock_index_id)
+                        if regist_event_qryset.count() == 0:  # 처음 등록될 경우에는 모두다 INSERT
+                            new_event_list.extend(market_event_list)
+                        else:
+                            del_event_list.extend(market_event_list)  # 모두다 추가한다음 소거법으로 진행
+                            for market_event_code in market_event_list:
+                                code_exist = False
+                                code_new = False
+                                for regist_event in regist_event_qryset:
+                                    if regist_event.event_code == market_event_code:
+                                        code_exist = True
+                                        # DB 에서 존재하는 종목 중 시장에서 존재하는 종목 말고는 모두 제거되어야 하는 종목임.
+                                        del_event_list.remove(market_event_code)
+
+                                if not code_exist:  # 시장 항목중 DB에 등록된 종목이 아니라면 신규종목으로 간주
+                                    code_new = True
+                                    new_event_list.append(market_event_code)
+
+                        # 삭제될 지수구성종목 모두 조회 및 삭제.
+                        del_event_qryset = IndexContainMapInfo.objects.filter(
+                            stock_index_id=regist_index_qryset.first().stock_index_id).filter(
+                            event_code__in=del_event_list)
+                        del_event_qryset.delete()
+
+                        # 신규 지수구성종목에 대해 insert 작업 진행
+                        for new_event_code in new_event_list:
+                            v = {'stock_index_id': regist_index_qryset.first().stock_index_id,
+                                 'event_code': new_event_code}
+                            entry = IndexContainMapInfo(**v)
+                            entry.save()
+
+            # # 가장 최근의 일괄처리 처리 날짜 조회하여 해당날짜 이후부터 INSERT (누락건에 대해 체크)
+            # mod_dt를 내림차순으로 정렬
+            # stock_event_id_item = [krxIndexMarketCode(market), '#']
+            # status_stock_event_id = ''.join(stock_event_id_item)
+            event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('지수가')).filter(
+                class_id=krxIndexMarketCode(market)).distinct().values_list('mod_dt').order_by(
+                '-mod_dt')[:1]
+
+            scan_date = None
+            if event_status.count() != 0:  # 최근날짜부터 INSERT 이므로 일배치 시작날짜 이전데이터를 가져올 경우는 없다.
+                scan_date = event_status.first()[0]
+            else:  # init 배치를 실행하지 않고 daily 배치만 실행하는경우 최근 일주일간 데이터를 가져오기.
+                scan_date = (today_org - datetime.timedelta(days=8)).date()
+
+            # 하루단위 전체종목 insert
+            while scan_date < today_org.date():  # 날짜별 insert
+                scan_date += datetime.timedelta(days=1)
+                scan_date_str = scan_date.strftime('%Y%m%d')
+                logger.info(
+                    '{}index price INSERT. market = {}, date = {}'.format(logger_method, market, scan_date_str))
+                info_df = None
                 try:
-                    market_index_list = stock.get_index_ticker_list(today, market)
+                    info_df = stock.get_index_ohlcv_by_ticker(scan_date_str, market)
                 except Exception as e:
-                    logger.error('{}get index ticker list error, market={}, e={}'.format(logger_method, market, e))
-                if len(market_index_list) == 0:
                     logger.error(
-                        '{}empty index list. skip for protect db data. market={}'.format(logger_method, market))
+                        '{}get price data error. date={}, error message={}'.format(logger_method, scan_date_str,
+                                                                                   e))
+                if info_df is None or len(info_df) == 0:
+                    logger.error('{}get empty data. date={} skip.'.format(logger_method, scan_date_str))
                     continue
 
-                # 신규 및 삭제종목 추리기.
-                new_index_list = []
-                del_index_list = []
-                exi_index_list = []
+                holiday = (info_df[['시가', '고가', '저가', '종가']] == 0).all(
+                    axis=None)
+                if holiday:
+                    continue
 
-                # 테스트를 위한 신규 및 삭제종목 관련 작업 스킵여부
-                if not SKIP_MANAGE_INDEX_BASIC:
-                    regist_index_qryset_by_market = IndexBasicInfo.objects.filter(mkt_code=krxIndexMarketCode(market))
-                    if regist_index_qryset_by_market.count() == 0:  # 처음 등록될 경우에는 모두다 INSERT
-                        new_index_list.extend(market_index_list)
+                info_df = info_df.replace({np.nan: None})
+                # info_df = info_df[['보유수량', '지분율', '한도수량', '한도소진률']]
+                info_df.rename(
+                    columns={'시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
+                             '저가': 'low', '거래대금': 'value', '등락률': 'up_down_rate',
+                             '등락유형': 'up_down_sort', '등락폭': 'up_down_value', '상장시가총액': 'market_cap'},
+                    inplace=True)
+                info_df['date'] = scan_date
+                with transaction.atomic():
+                    for k, v in info_df.to_dict('index').items():
+                        # 특정 코드 테스트 시 사용
+                        # if BATCH_INDEX_TEST_CODE_YN:
+                        #     if k not in BATCH_INDEX_TEST_CODE_LIST:
+                        #         continue
+                        pattern = r'[^a-zA-Z0-9가-힣]'
+                        # 특수문자를 공백으로 치환
+                        market_index_dense_nm = re.sub(pattern, '', k)
+
+                        if market_index_dense_nm == '코스닥지수':
+                            market_index_dense_nm = '코스닥'
+
+                        index_info = IndexBasicInfo.objects.filter(index_dense_nm=market_index_dense_nm).filter(
+                            mkt_code=krxIndexMarketCode(market))
+                        if index_info.count() == 0:  # 정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
+                            # logger.error('{}KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(logger_method, k))
+                            continue
+
+                        entry = IndexPriceInfo(**v)
+                        entry.stock_index_id = index_info.first().stock_index_id
+                        entry.save()
+
+                    # 시장종류별로 최신일 status 업데이트.
+                    event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('지수가')).filter(
+                        class_id=krxIndexMarketCode(market))
+                    if len(event_status) == 0:
+                        status_dict = {'table_type': dbTableType('지수가'), 'mod_dt': scan_date,
+                                       'reg_dt': scan_date,
+                                       'update_type': 'U', 'class_id': krxIndexMarketCode(market)}
+                        event_status_insert = InfoUpdateStatus(**status_dict)
+                        event_status_insert.save()
                     else:
-                        del_index_list.extend(market_index_list)  # 모두다 추가한다음 소거법으로 진행
-                        for market_index_code in market_index_list:
-                            code_exist = False
-                            code_new = False
-                            for regist_index in regist_index_qryset_by_market:
-                                if regist_index.index_code == market_index_code:
-                                    code_exist = True
-                                    exi_index_list.append(market_index_code)
-                                    # DB 에서 존재하는 종목 중 시장에서 존재하는 종목 말고는 모두 제거되어야 하는 종목임.
-                                    del_index_list.remove(market_index_code)
-
-                            if not code_exist:  # 시장 항목중 DB에 등록된 종목이 아니라면 신규종목으로 간주
-                                code_new = True
-                                new_index_list.append(market_index_code)
-                    with transaction.atomic():
-                        # 시장에서 삭제된 지수 db에서 삭제
-                        for del_code in del_index_list:
-                            del_index_qryset = IndexBasicInfo.objects.filter(event_code=del_code)
-                            if del_index_qryset.count() != 0:
-                                logger.info('{}지수 삭제 : {} / {}'.format(logger_method,
-                                                                       del_index_qryset.first().index_code,
-                                                                       del_index_qryset.first().index_nm))
-                                # indexbasic 테이블 업데이트 - 삭제 종목
-                                del_index_id = del_index_qryset.first().del_index_id
-                                del_index_qryset.delete()
-
-                                # index contain map info 업데이트 - 삭제 종목
-                                del_index_contain_map = IndexContainMapInfo.objects.filter(
-                                    stock_index_id=del_index_id)
-                                del_index_contain_map.delete()
-
-                                # stockprice 테이블 업데이트 - 삭제 종목
-                                del_index_price = IndexPriceInfo.objects.filter(stock_index_id=del_index_id)
-                                del_index_price.delete()
-
-                                # 관리상태정보 삭제 - 시장종류별로 관리되므로 지수별 관리 필요없음.
-                                # del_event_status = InfoUpdateStatus.objects.filter(class_id=del_index_id) \
-                                #     .filter(table_type=dbTableType('지수가'))
-                                # del_event_status.delete()
-
-                        # 신규 지수에 대해 insert 작업 진행
-                        for new_index_code in new_index_list:
-                            name = stock.get_index_ticker_name(new_index_code)
-                            event_list = stock.get_index_portfolio_deposit_file(date=today, ticker=new_index_code)
-                            pattern = r'[^a-zA-Z0-9가-힣\s]'
-                            # 특수문자를 공백으로 치환
-                            index_dense_nm = re.sub(pattern, '', name)
-                            v = {'index_code': new_index_code, 'index_nm': name,
-                                 'index_dense_nm': index_dense_nm,
-                                 'mkt_code': krxIndexMarketCode(market)}
-                            entry = IndexBasicInfo(**v)
-                            entry.save()
-
-                        # 업데이트된 모든 지수에 대해 구성지수종목 업데이트 및 삭제.
-                        for market_index_code in market_index_list:
-                            regist_index_qryset = IndexBasicInfo.objects.filter(index_code=market_index_code)
-                            if regist_index_qryset.count() == 0:
-                                logger.error('index is not synchronized with db. skip.')
-                                continue
-                            # if market_index_code not in new_index_list and market_index_code not in exi_index_list:
-                            #     logger.error('index is not synchronized with db. skip.')
-                            #     continue
-                            market_event_list = []
-                            try:
-                                market_event_list = stock.get_index_portfolio_deposit_file(date=today,
-                                                                                           ticker=market_index_code)
-                                time.sleep(INDEX_DAILY_API_REQUEST_TERM)
-                            except Exception as e:
-                                logger.error('{}get event ticker list error, market={}, index={}, e={}'
-                                             .format(logger_method, market, market_index_code, e))
-                            if len(market_event_list) == 0:
-                                logger.error('{}empty event list. skip for protect db data. market={}, index={}'
-                                             .format(logger_method, market, market_index_code))
-                                continue
-
-                            new_event_list = []
-                            del_event_list = []
-                            regist_event_qryset = IndexContainMapInfo.objects.filter(
-                                stock_index_id=regist_index_qryset.first().stock_index_id)
-                            if regist_event_qryset.count() == 0:  # 처음 등록될 경우에는 모두다 INSERT
-                                new_event_list.extend(market_event_list)
-                            else:
-                                del_index_list.extend(market_event_list)  # 모두다 추가한다음 소거법으로 진행
-                                for market_event_code in market_event_list:
-                                    code_exist = False
-                                    code_new = False
-                                    for regist_event in regist_event_qryset:
-                                        if regist_event.event_code == market_event_code:
-                                            code_exist = True
-                                            # DB 에서 존재하는 종목 중 시장에서 존재하는 종목 말고는 모두 제거되어야 하는 종목임.
-                                            del_event_list.remove(market_event_code)
-
-                                    if not code_exist:  # 시장 항목중 DB에 등록된 종목이 아니라면 신규종목으로 간주
-                                        code_new = True
-                                        new_event_list.append(market_event_code)
-
-                            # 삭제될 지수구성종목 모두 조회 및 삭제.
-                            del_event_qryset = IndexContainMapInfo.objects.filter(
-                                stock_index_id=regist_index_qryset.first().stock_index_id).filter(
-                                event_code__in=del_event_list)
-                            del_event_qryset.delete()
-
-                            # 신규 지수구성종목에 대해 insert 작업 진행
-                            for new_event_code in new_event_list:
-                                v = {'stock_index_id': regist_index_qryset.first().stock_index_id,
-                                     'event_code': new_event_code}
-                                entry = IndexContainMapInfo(**v)
-                                entry.save()
-
-                # # 가장 최근의 일괄처리 처리 날짜 조회하여 해당날짜 이후부터 INSERT (누락건에 대해 체크)
-                # mod_dt를 내림차순으로 정렬
-                # stock_event_id_item = [krxIndexMarketCode(market), '#']
-                # status_stock_event_id = ''.join(stock_event_id_item)
-                event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('지수가')).filter(
-                    class_id=krxIndexMarketCode(market)).distinct().values_list('mod_dt').order_by(
-                    '-mod_dt')[:1]
-
-                scan_date = None
-                if event_status.count() != 0:  # 최근날짜부터 INSERT 이므로 일배치 시작날짜 이전데이터를 가져올 경우는 없다.
-                    scan_date = event_status.first()[0]
-                else:  # init 배치를 실행하지 않고 daily 배치만 실행하는경우 최근 일주일간 데이터를 가져오기.
-                    scan_date = (today_org - datetime.timedelta(days=8)).date()
-
-                # 하루단위 전체종목 insert
-                while scan_date < today_org.date():  # 날짜별 insert
-                    scan_date += datetime.timedelta(days=1)
-                    scan_date_str = scan_date.strftime('%Y%m%d')
-                    info_df = None
-                    try:
-                        info_df = stock.get_index_ohlcv_by_ticker(scan_date_str, market)
-                    except Exception as e:
-                        logger.error(
-                            '{}get price data error. date={}, error message={}'.format(logger_method, scan_date_str,
-                                                                                       e))
-                    if info_df is None or len(info_df) == 0:
-                        logger.error('{}get empty data. date={} skip.'.format(logger_method, scan_date_str))
-                        continue
-
-                    # 휴일에는 데이터 자체가 아예 없음.
-                    holiday = (info_df[['시가', '고가', '저가', '종가']] == 0).all(
-                        axis=None)
-                    if holiday:
-                        continue
-
-                    info_df = info_df.replace({np.nan: None})
-                    # info_df = info_df[['보유수량', '지분율', '한도수량', '한도소진률']]
-                    info_df.rename(
-                        columns={'시가': 'open', '종가': 'close', '거래량': 'volume', '고가': 'high',
-                                 '저가': 'low', '거래대금': 'value', '등락률': 'up_down_rate',
-                                 '등락유형': 'up_down_sort', '등락폭': 'up_down_value', '상장시가총액': 'market_cap'},
-                        inplace=True)
-                    info_df['date'] = scan_date
-                    with transaction.atomic():
-                        for k, v in info_df.to_dict('index').items():
-                            # 특정 코드 테스트 시 사용
-                            # if BATCH_INDEX_TEST_CODE_YN:
-                            #     if k not in BATCH_INDEX_TEST_CODE_LIST:
-                            #         continue
-                            if k == '코스닥지수':
-                                k = '코스닥'
-                            index_info = IndexBasicInfo.objects.filter(index_dense_nm=k)
-                            if index_info.count() == 0:  # 정보는 존재하나 krx 종목정보에 등록되어 있지 않은 경우 UPDATE 취소
-                                # logger.error('{}KRX 종목 정보에 등록되어 있지 않음. code = {}'.format(logger_method, k))
-                                continue
-
-                            entry = IndexPriceInfo(**v)
-                            entry.stock_index_id = index_info.first().stock_index_id
-                            entry.save()
-
-                        # 시장종류별로 최신일 status 업데이트.
-                        event_status = InfoUpdateStatus.objects.filter(table_type=dbTableType('지수가'))
-                        if len(event_status) == 0:
-                            status_dict = {'table_type': dbTableType('지수가'), 'mod_dt': scan_date,
-                                           'reg_dt': scan_date,
-                                           'update_type': 'U', 'class_id': krxIndexMarketCode(market)}
-                            event_status_insert = InfoUpdateStatus(**status_dict)
-                            event_status_insert.save()
-                        else:
-                            event_status.update(mod_dt=scan_date)
-        else:
-            logger.info('{}manage_event_init executed. skip.'.format(logger_method))
+                        event_status.update(mod_dt=scan_date)
 
         logger.info('{}end'.format(logger_method))
 

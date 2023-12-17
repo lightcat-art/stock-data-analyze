@@ -69,7 +69,7 @@ class operator:
 
             etc_daily_batch_time = None
             if ETC_BATCH_IMMEDIATE:
-                etc_daily_batch_time = today_org + datetime.timedelta(seconds=40)
+                etc_daily_batch_time = today_org + datetime.timedelta(seconds=30)
             else:
                 etc_daily_batch_time = datetime.datetime.combine(
                     datetime.date(today_org.year, today_org.month, today_org.day),
@@ -97,13 +97,13 @@ class operator:
 
             foreign_daily_batch_time = None
             if FOREIGN_BATCH_IMMEDIATE:
-                foreign_daily_batch_time = today_org + datetime.timedelta(seconds=40)
+                foreign_daily_batch_time = today_org + datetime.timedelta(seconds=50)
             else:
                 foreign_daily_batch_time = datetime.datetime.combine(
                     datetime.date(today_org.year, today_org.month, today_org.day),
                     datetime.time(FOREIGN_BATCH_HOUR, FOREIGN_BATCH_MIN, FOREIGN_BATCH_SEC))
 
-            self.scheduler.add_job(manage_foreign_holding_daily(), 'cron', hour=foreign_daily_batch_time.hour,
+            self.scheduler.add_job(manage_foreign_holding_daily, 'cron', hour=foreign_daily_batch_time.hour,
                                    minute=foreign_daily_batch_time.minute,
                                    second=foreign_daily_batch_time.second,
                                    id='manage_foreign_holding_daily',
@@ -111,7 +111,7 @@ class operator:
 
             index_daily_batch_time = None
             if INDEX_BATCH_IMMEDIATE:
-                index_daily_batch_time = today_org + datetime.timedelta(seconds=40)
+                index_daily_batch_time = today_org + datetime.timedelta(seconds=60)
             else:
                 index_daily_batch_time = datetime.datetime.combine(
                     datetime.date(today_org.year, today_org.month, today_org.day),
