@@ -33,6 +33,10 @@ FOREIGN_BATCH_HOUR = 18
 FOREIGN_BATCH_MIN = 6
 FOREIGN_BATCH_SEC = 00
 
+INDEX_BATCH_HOUR = 18
+INDEX_BATCH_MIN = 7
+INDEX_BATCH_SEC = 00
+
 
 # 운영
 # BATCH_TEST = False  # 배치 테스트 여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
@@ -52,6 +56,7 @@ BATCH_TEST = False  # 배치 테스트 여부 - True라면 init_batch와 daily_b
 ETC_BATCH_IMMEDIATE = False  # krx-api 배치 즉시 INSERT여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
 INDIC_BATCH_IMMEDIATE = False  # daily 지표 배치 즉시 INSERT 여부
 FOREIGN_BATCH_IMMEDIATE = True  # 외국인 지표 관련 배치 즉시 INSERT 여부
+INDEX_BATCH_IMMEDIATE = True # 지수 관련 배치 즉시 INSERT 여부
 SKIP_MANAGE_EVENT_INIT = True  # 추가할 종목이 있더라도 현재 DB에 등록된 종목만 사용하도록 INSERT 스킵여부 설부
 SKIP_MANAGE_INDEX_BASIC = False  # 추가할 종목이 있더라도 현재 DB에 등록된 종목만 사용하도록 INSERT 스킵여부 설부
 BATCH_TEST_CODE_YN = False  # 테스트시 특정 코드만 진행 여부

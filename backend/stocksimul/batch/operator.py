@@ -4,14 +4,15 @@ from django.conf import settings
 from django_apscheduler.jobstores import DjangoJobStore
 from .stock_batch import manage_event_init, manage_event_daily, validate_connection, \
     manage_event_daily_etc, manage_financial_indicator_daily, manage_event_init_etc, \
-    manage_foreign_holding_daily
+    manage_foreign_holding_daily, manage_index_daily
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 import traceback
 import datetime
 from ..config.stockConfig import BATCH_HOUR, BATCH_MIN, BATCH_SEC, BATCH_TEST, \
     ETC_BATCH_HOUR, ETC_BATCH_MIN, ETC_BATCH_SEC, ETC_BATCH_IMMEDIATE, \
     INDIC_BATCH_HOUR, INDIC_BATCH_MIN, INDIC_BATCH_SEC, INDIC_BATCH_IMMEDIATE, \
-    FOREIGN_BATCH_HOUR, FOREIGN_BATCH_MIN, FOREIGN_BATCH_SEC, FOREIGN_BATCH_IMMEDIATE
+    FOREIGN_BATCH_HOUR, FOREIGN_BATCH_MIN, FOREIGN_BATCH_SEC, FOREIGN_BATCH_IMMEDIATE, \
+    INDEX_BATCH_IMMEDIATE, INDEX_BATCH_HOUR, INDEX_BATCH_MIN, INDEX_BATCH_SEC
 import logging
 from .stock_batch_manager import StockBatchManager
 from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
@@ -106,6 +107,20 @@ class operator:
                                    minute=foreign_daily_batch_time.minute,
                                    second=foreign_daily_batch_time.second,
                                    id='manage_foreign_holding_daily',
+                                   replace_existing=True)
+
+            index_daily_batch_time = None
+            if INDEX_BATCH_IMMEDIATE:
+                index_daily_batch_time = today_org + datetime.timedelta(seconds=40)
+            else:
+                index_daily_batch_time = datetime.datetime.combine(
+                    datetime.date(today_org.year, today_org.month, today_org.day),
+                    datetime.time(INDEX_BATCH_HOUR, INDEX_BATCH_MIN, INDEX_BATCH_SEC))
+
+            self.scheduler.add_job(manage_index_daily(), 'cron', hour=index_daily_batch_time.hour,
+                                   minute=index_daily_batch_time.minute,
+                                   second=index_daily_batch_time.second,
+                                   id='manage_index_daily',
                                    replace_existing=True)
 
             # if BATCH_TEST:

@@ -651,6 +651,7 @@ def manage_index_daily():
                         try:
                             market_event_list = stock.get_index_portfolio_deposit_file(date=today,
                                                                                        ticker=market_index_code)
+                            time.sleep(0.2)
                         except Exception as e:
                             logger.error('{}get index ticker list error, market={}, index={}, e={}'
                                          .format(logger_method, market, market_index_code, e))
