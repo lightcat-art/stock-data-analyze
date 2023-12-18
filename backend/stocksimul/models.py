@@ -184,15 +184,15 @@ class IndexPriceInfo(models.Model):
     ip_info_id = models.AutoField(primary_key=True)
     stock_index_id = models.IntegerField(default=-1)
     date = models.DateField()
-    open = models.IntegerField(null=True)
-    close = models.IntegerField(null=True)
-    high = models.IntegerField(null=True)
-    low = models.IntegerField(null=True)
+    open = models.FloatField(null=True)
+    close = models.FloatField(null=True)
+    high = models.FloatField(null=True)
+    low = models.FloatField(null=True)
     volume = models.IntegerField(null=True)
     value = models.BigIntegerField(null=True)
     up_down_rate = models.FloatField(null=True)
     up_down_sort = models.CharField(max_length=2, null=True)
-    up_down_value = models.IntegerField(null=True)
+    up_down_value = models.FloatField(null=True)
     market_cap = models.BigIntegerField(null=True)
 
     objects = models.Manager()
@@ -200,8 +200,8 @@ class IndexPriceInfo(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['stock_index_id'], name='idx_ip_info_1'),
+            models.Index(fields=['stock_index_id', 'date'], name='idx_ip_info_2'),
         ]
-
 
 # class StockShares(models.Model):
 #     shares_info_id = models.AutoField(primary_key=True)
