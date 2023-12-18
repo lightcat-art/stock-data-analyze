@@ -26,40 +26,26 @@ ETC_BATCH_MIN = 4
 ETC_BATCH_SEC = 00
 
 INDIC_BATCH_HOUR = 18
-INDIC_BATCH_MIN = 5
-INDIC_BATCH_SEC = 00
+INDIC_BATCH_MIN = 4
+INDIC_BATCH_SEC = 30
 
 FOREIGN_BATCH_HOUR = 18
-FOREIGN_BATCH_MIN = 6
+FOREIGN_BATCH_MIN = 5
 FOREIGN_BATCH_SEC = 00
 
 INDEX_BATCH_HOUR = 18
-INDEX_BATCH_MIN = 7
-INDEX_BATCH_SEC = 00
+INDEX_BATCH_MIN = 5
+INDEX_BATCH_SEC = 30
 
 
 # 운영
-# BATCH_TEST = False  # 배치 테스트 여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
-# ETC_BATCH_IMMEDIATE = False  # krx-api 배치 즉시 INSERT여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
-# INDIC_BATCH_IMMEDIATE = False  # daily 지표 배치 즉시 INSERT 여부
-# FOREIGN_BATCH_IMMEDIATE = True  # 외국인 지표 관련 배치 즉시 INSERT 여부
-# INDEX_BATCH_IMMEDIATE = True  # 지수 관련 배치 즉시 INSERT 여부
-# SKIP_MANAGE_EVENT_INIT = True  # 추가할 종목이 있더라도 현재 DB에 등록된 종목만 사용하도록 INSERT 스킵여부 설부
-# BATCH_TEST_CODE_YN = False  # 테스트시 특정 코드만 진행 여부
-# BATCH_TEST_CODE_LIST = ['001260']  # 특정 종목 테스트 시 종목코드 지정
-# FIRST_BATCH_TODATE = '20231126'  # ETC 배치 작업 시 첫 INSERT의 todate 조회날짜를 일괄적으로 맞추기 위해 최근날짜를 수기로 지정.
-# FUND_SKIP_FINSTATE = False  # 재무제표 스킵여부
-# FUND_SKIP_CO = False  # 주식수 스킵여부
-# FUND_API_REQUEST_TERM = 0.5
-# INDEX_DAILY_API_REQUEST_TERM = 0.5
-
-# 개발
 BATCH_TEST = False  # 배치 테스트 여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
 ETC_BATCH_IMMEDIATE = False  # krx-api 배치 즉시 INSERT여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
 INDIC_BATCH_IMMEDIATE = False  # daily 지표 배치 즉시 INSERT 여부
-FOREIGN_BATCH_IMMEDIATE = True  # 외국인 지표 관련 배치 즉시 INSERT 여부
-INDEX_BATCH_IMMEDIATE = True  # 지수 관련 배치 즉시 INSERT 여부
-SKIP_MANAGE_EVENT_INIT = True  # 추가할 종목이 있더라도 현재 DB에 등록된 종목만 사용하도록 INSERT 스킵여부 설부
+# FOREIGN_BATCH_IMMEDIATE = False  # 외국인 지표 관련 배치 즉시 INSERT 여부
+# INDEX_BATCH_IMMEDIATE = False  # 지수 관련 배치 즉시 INSERT 여부
+# SKIP_MANAGE_EVENT_INIT = False  # 추가할 종목이 있더라도 현재 DB에 등록된 종목만 사용하도록 INSERT 스킵여부 설부
+SKIP_MANAGE_INDEX_INFO = False  # 추가할 지표나 지표구성종목이 있더라도 현재 DB에 등록된 종목만 사용하도록 INSERT 스킵여부 설부
 BATCH_TEST_CODE_YN = False  # 테스트시 특정 코드만 진행 여부
 BATCH_TEST_CODE_LIST = ['001260']  # 특정 종목 테스트 시 종목코드 지정
 FIRST_BATCH_TODATE = '20231126'  # ETC 배치 작업 시 첫 INSERT의 todate 조회날짜를 일괄적으로 맞추기 위해 최근날짜를 수기로 지정.
@@ -67,3 +53,19 @@ FUND_SKIP_FINSTATE = False  # 재무제표 스킵여부
 FUND_SKIP_CO = False  # 주식수 스킵여부
 FUND_API_REQUEST_TERM = 0.5
 INDEX_DAILY_API_REQUEST_TERM = 0.5
+
+# 개발
+# BATCH_TEST = False  # 배치 테스트 여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
+# ETC_BATCH_IMMEDIATE = False  # krx-api 배치 즉시 INSERT여부 - True라면 init_batch와 daily_batch가 앱이 실행된 거의 직후 실행되도록 함.
+# INDIC_BATCH_IMMEDIATE = False  # daily 지표 배치 즉시 INSERT 여부
+FOREIGN_BATCH_IMMEDIATE = True  # 외국인 지표 관련 배치 즉시 INSERT 여부
+INDEX_BATCH_IMMEDIATE = True  # 지수 관련 배치 즉시 INSERT 여부
+SKIP_MANAGE_EVENT_INIT = True  # 추가할 종목이 있더라도 현재 DB에 등록된 종목만 사용하도록 INSERT 스킵여부 설부
+# SKIP_MANAGE_INDEX_INFO = False  # 추가할 지표나 지표구성종목이 있더라도 현재 DB에 등록된 종목만 사용하도록 INSERT 스킵여부 설부
+# BATCH_TEST_CODE_YN = False  # 테스트시 특정 코드만 진행 여부
+# BATCH_TEST_CODE_LIST = ['001260']  # 특정 종목 테스트 시 종목코드 지정
+# FIRST_BATCH_TODATE = '20231126'  # ETC 배치 작업 시 첫 INSERT의 todate 조회날짜를 일괄적으로 맞추기 위해 최근날짜를 수기로 지정.
+# FUND_SKIP_FINSTATE = False  # 재무제표 스킵여부
+# FUND_SKIP_CO = False  # 주식수 스킵여부
+# FUND_API_REQUEST_TERM = 0.5
+# INDEX_DAILY_API_REQUEST_TERM = 0.5

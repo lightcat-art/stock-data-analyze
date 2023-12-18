@@ -10,8 +10,8 @@ import numpy as np
 from numpy.lib import math
 import logging
 from ..config.stockConfig import BATCH_TEST_CODE_YN, BATCH_TEST_CODE_LIST, SKIP_MANAGE_EVENT_INIT, \
-    FIRST_BATCH_TODATE, FUND_API_REQUEST_TERM, FUND_SKIP_CO, FUND_SKIP_FINSTATE, SKIP_MANAGE_INDEX_BASIC, \
-    INDEX_DAILY_API_REQUEST_TERM
+    FIRST_BATCH_TODATE, FUND_API_REQUEST_TERM, FUND_SKIP_CO, FUND_SKIP_FINSTATE, \
+    INDEX_DAILY_API_REQUEST_TERM, SKIP_MANAGE_INDEX_INFO
 from ..custom.opendartreader.dart_manager import DartManager
 from ..custom.opendartreader.dart_config import DartFinstateConfig, DartStockSharesConfig
 from ..custom import pykrx as stock_custom
@@ -588,7 +588,7 @@ def manage_index_daily():
             exi_index_list = []
 
             # 테스트를 위한 신규 및 삭제종목 관련 작업 스킵여부
-            if not SKIP_MANAGE_INDEX_BASIC:
+            if not SKIP_MANAGE_INDEX_INFO:
                 regist_index_qryset_by_market = IndexBasicInfo.objects.filter(mkt_code=krxIndexMarketCode(market))
                 if regist_index_qryset_by_market.count() == 0:  # 처음 등록될 경우에는 모두다 INSERT
                     new_index_list.extend(market_index_list)
