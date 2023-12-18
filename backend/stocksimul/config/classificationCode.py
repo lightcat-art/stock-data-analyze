@@ -94,6 +94,18 @@ def krxMarketCode(TYPE):
     return fieldDict[TYPE]
 
 
+def krxIndexMarketCode(TYPE):
+    fieldDict = {
+        'KOSPI': '11',
+        'KOSDAQ': '12',
+        'KRX': '15',
+        '테마': '20',
+    }
+    if TYPE not in fieldDict:
+        return None
+    return fieldDict[TYPE]
+
+
 def krxMarketStatusCode(TYPE):
     codeDict = {
         '정상': '11',
@@ -103,6 +115,29 @@ def krxMarketStatusCode(TYPE):
     if TYPE not in codeDict:
         return None
 
+    return codeDict[TYPE]
+
+
+def dbTableType(TYPE):
+    codeDict = {
+        '종목수정종가': 'EP',  # P -> EP  , stocksimul_priceinfo
+        '종목미수정종가': 'NP',  # N -> NP, stocksimul_notadjpriceinfo
+        '지표': 'FI',  # I -> FI, stocksimul_financialindicator
+        '외국인보유': 'FH',  # H -> FH, stocksimul_foreignholdingvol
+        '지수가': 'IP',  # stocksimul_indexpriceinfo
+    }
+    if TYPE not in codeDict:
+        return None
+    return codeDict[TYPE]
+
+
+def dbUpdateType(TYPE):
+    codeDict = {
+        '완료': 'U',
+        '미완료': 'N',
+    }
+    if TYPE not in codeDict:
+        return None
     return codeDict[TYPE]
 
 
