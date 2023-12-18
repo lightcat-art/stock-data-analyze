@@ -179,13 +179,13 @@ def get_index_ohlcv_by_ticker(
     """  # pylint: disable=line-too-long # noqa: E501
 
     if isinstance(date, datetime.datetime):
-        date = krx.datetime2string(date)
+        date = wrap.datetime2string(date)
 
     date = date.replace("-", "")
 
-    df = krx.get_index_ohlcv_by_ticker(date, market)
+    df = wrap.get_index_ohlcv_by_ticker(date, market)
     holiday = (df[['시가', '고가', '저가', '종가']] == 0).all(axis=None)
     if holiday and alternative:
         target_date = get_nearest_business_day_in_a_week(date=date, prev=True)
-        df = krx.get_index_ohlcv_by_ticker(target_date, market)
+        df = wrap.get_index_ohlcv_by_ticker(target_date, market)
     return df

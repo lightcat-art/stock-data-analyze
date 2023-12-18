@@ -727,7 +727,7 @@ def manage_index_daily():
                     '{}index price INSERT. market = {}, date = {}'.format(logger_method, market, scan_date_str))
                 info_df = None
                 try:
-                    info_df = stock.get_index_ohlcv_by_ticker(scan_date_str, market)
+                    info_df = stock_custom.get_index_ohlcv_by_ticker(scan_date_str, market)
                 except Exception as e:
                     logger.error(
                         '{}get price data error. date={}, error message={}'.format(logger_method, scan_date_str,
